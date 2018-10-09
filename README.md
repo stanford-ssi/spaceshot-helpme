@@ -1,0 +1,1 @@
+# Here lies code for the High altitude Electronic Launch Platform with Mechanical Elements (HELPME) Board
