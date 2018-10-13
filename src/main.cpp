@@ -15,6 +15,9 @@
 #define SRAD_TX 10
 #define SRAD_RX 11
 
+#define MODE_RECEIVING 1
+#define MODE_TRANSMITTING 2
+
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
  
 void SERCOM1_Handler()
@@ -35,6 +38,12 @@ void min_tx_byte(uint8_t port, uint8_t byte) {
 uint32_t min_time_ms() {
   return millis();
 }
+
+void min_tx_start(uint8_t port) {}
+
+void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
+
+struct min_context min_ctx_s6c;
 
 void setup() {
   
