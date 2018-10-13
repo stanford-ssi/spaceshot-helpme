@@ -2,7 +2,8 @@
 #include <SD.h>
 #include <DFRobot_BMP388_SPI.h>
 #include <Adafruit_BNO055.h>
-#include "wiring_private.h"
+#include <wiring_private.h>
+#include "min.h"
 
 #define LED_PIN SCL
 #define BMP_CS 34
@@ -11,8 +12,32 @@
 #define GYRO_CS 3
 #define ADXL_CS 0
 
-void setup() {
+#define SRAD_TX 10
+#define SRAD_RX 11
 
+Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
+ 
+void SERCOM1_Handler()
+{
+  SerialS6C.IrqHandler();
+}
+
+uint16_t min_tx_space(uint8_t port) {
+	uint16_t n = 1;
+	if (port == 0) n = SerialS6C.availableForWrite();
+	return n;
+}
+
+void min_tx_byte(uint8_t port, uint8_t byte) {
+	if (port == 0) SerialS6C.write(&byte, 1U);
+}
+
+uint32_t min_time_ms() {
+  return millis();
+}
+
+void setup() {
+  
   PORT->Group[0].DIR.reg = PORT_PA27;
   PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
   //COMMEMNT OUT B4 LAUNCH
@@ -35,29 +60,7 @@ void setup() {
   DFRobot_BMP388_SPI bmp(BMP_CS);
   bmp.begin();
   SD.begin(SD_CS);
-  
-  Adafruit_BNO055 bno = Adafruit_BNO055(17, 18);
-  
-  pinPeripheral(17, PIO_SERCOM_ALT);
-  pinPeripheral(18, PIO_SERCOM_ALT);
 
-  //pinMode(17, OUTPUT);
-  
-  /*while (true) {
-    digitalWrite(17, HIGH);
-    PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
-    delay(50);
-    digitalWrite(17, LOW);
-    delay(50);
-    }*/
-  
-  if (!bno.begin()) {
-    while (true) {
-      SerialUSB.println("BNO not working :(");
-      delay(100);
-    }
-  }
-  
   while (true) {
 
     SerialUSB.println("HEATER DISABLED. ENABLE ME");
@@ -65,28 +68,12 @@ void setup() {
     digitalWrite(LED_PIN, HIGH);
     delay(300);
     digitalWrite(LED_PIN, LOW);
-    SerialUSB.print("Pressure: ");
+
+    //SerialUSB.print("Pressure: ");
+    //SerialUSB.println(bmp.readPressure());
     
-    SerialUSB.println(bmp.readPressure());
 
-    /*imu::Vector<3> euler = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-    SerialUSB.print("X: ");
-    SerialUSB.print(euler.x());
-    SerialUSB.print(" Y: ");
-    SerialUSB.print(euler.y());
-    SerialUSB.print(" Z: ");
-    SerialUSB.print(euler.z());
-    SerialUSB.print("\t\t");*/
-
-    File myFile;
-
-    /*SerialUSB.print("Initializing SD card...");
-
-    if (!SD.begin(SD_CS)) {
-      SerialUSB.println("initialization failed!");
-    }
-    SerialUSB.println("initialization done.");*/
-
+    /*File myFile;
     // open the file. note that only one file can be open at a time,
     // so you have to close this one before opening another.
     if (SD.remove("test.txt")) SerialUSB.println("Removed file");
@@ -119,10 +106,9 @@ void setup() {
     } else {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
-    }
+    }*/
 
     SerialUSB.println("......");
-    
     delay(200);
     
   }
