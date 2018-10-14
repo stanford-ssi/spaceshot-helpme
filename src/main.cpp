@@ -14,15 +14,23 @@
 
 #define SRAD_TX 10
 #define SRAD_RX 11
+#define SGPS_TX 4
+#define SGPS_RX 1
 
 #define MODE_RECEIVING 1
 #define MODE_TRANSMITTING 2
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
+Uart SerialGPS(&sercom2, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
  
 void SERCOM1_Handler()
 {
   SerialS6C.IrqHandler();
+}
+
+void SERCOM2_Handler()
+{
+  SerialGPS.IrqHandler();
 }
 
 uint16_t min_tx_space(uint8_t port) {
@@ -46,6 +54,8 @@ void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
 struct min_context min_ctx_s6c;
 
 void setup() {
+  pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
+  pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
   
   PORT->Group[0].DIR.reg = PORT_PA27;
   PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
@@ -118,6 +128,7 @@ void setup() {
     }*/
 
     SerialUSB.println("......");
+    SerialUSB.print(SerialGPS.read());
     delay(200);
     
   }
