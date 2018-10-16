@@ -54,6 +54,7 @@ void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
 struct min_context min_ctx_s6c;
 
 void setup() {
+  SerialGPS.begin(9600);
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
   pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
   
@@ -82,14 +83,14 @@ void setup() {
 
   while (true) {
 
-    SerialUSB.println("HEATER DISABLED. ENABLE ME");
+    // SerialUSB.println("HEATER DISABLED. ENABLE ME");
 
-    digitalWrite(LED_PIN, HIGH);
-    delay(300);
-    digitalWrite(LED_PIN, LOW);
+    //digitalWrite(LED_PIN, HIGH);
+    //delay(300);
+    //digitalWrite(LED_PIN, LOW);
 
-    //SerialUSB.print("Pressure: ");
-    //SerialUSB.println(bmp.readPressure());
+    // SerialUSB.print("Pressure: ");
+    // SerialUSB.println(bmp.readPressure());
     
 
     /*File myFile;
@@ -126,11 +127,9 @@ void setup() {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
     }*/
-
-    SerialUSB.println("......");
-    SerialUSB.print(SerialGPS.read());
-    delay(200);
-    
+    if (SerialGPS.available() > 0)
+      SerialUSB.write(SerialGPS.read());
+    delay(1);
   }
 }
 
