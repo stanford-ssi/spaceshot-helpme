@@ -7,3 +7,6 @@
 [submodule "lib/BMP3-Sensor-API"]
 	path = lib/BMP3-Sensor-API
 	url = https://github.com/BoschSensortec/BMP3-Sensor-API.git
+[submodule "lib/NeoGPS"]
+	path = lib/NeoGPS
+	url = https://github.com/SlashDevin/NeoGPS
