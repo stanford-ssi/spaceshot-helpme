@@ -5,9 +5,12 @@
 #include <wiring_private.h>
 #include <NMEAGPS.h>
 #include "min.h"
+//#include "bma2x2_support.hpp"
+#include "bmg160_support.hpp"
 
 #define LED_PIN SCL
 #define BMP_CS 34
+#define BMP2_CS 26
 #define SD_CS 5
 #define ACCEL_CS 13
 #define GYRO_CS 3
@@ -66,29 +69,44 @@ void setup() {
   PORT->Group[0].OUTSET.reg = (1UL << (28 % 32));
   
   pinMode(LED_PIN, OUTPUT);
-  //pinMode(SD_CS, OUTPUT);
+  pinMode(SD_CS, OUTPUT);
   pinMode(ACCEL_CS, OUTPUT);
-  //pinMode(BMP_CS, OUTPUT);
+  pinMode(BMP_CS, OUTPUT);
   pinMode(ADXL_CS, OUTPUT);
   pinMode(GYRO_CS, OUTPUT);
-  
-  //digitalWrite(SD_CS, LOW);
-  //digitalWrite(BMP_CS, HIGH);
+  pinMode(BMP2_CS,OUTPUT);
+
+  digitalWrite(BMP2_CS,HIGH);
+  digitalWrite(SD_CS, HIGH);
+  digitalWrite(BMP_CS, HIGH);
   digitalWrite(ACCEL_CS, HIGH);
   digitalWrite(GYRO_CS, HIGH);
   digitalWrite(ADXL_CS, HIGH);
+
   SerialUSB.begin(9600);
+
   DFRobot_BMP388_SPI bmp(BMP_CS);
+  DFRobot_BMP388_SPI bmp2(BMP2_CS);
+
   bmp.begin();
+  bmp2.begin();
   SD.begin(SD_CS);
 
   NMEAGPS gps;
   gps_fix fix;
   while (true) {
+<<<<<<< HEAD
     if (gps.available(SerialGPS)) {
       SerialUSB.print(fix.longitude());
     }
     delay(100);
+=======
+
+    delay(2000);
+    //bma2x2_data_readout_template();
+    SerialUSB.println("Test1");
+    bmg160_data_readout_template();
+>>>>>>> 617409340d25203ef92c93e3c9f86e365149d3b7
     // SerialUSB.println("HEATER DISABLED. ENABLE ME");
 
     //
@@ -133,6 +151,14 @@ void setup() {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
     }*/
+<<<<<<< HEAD
+=======
+    /*
+    if (SerialGPS.available() > 0)
+      SerialUSB.write(SerialGPS.read());
+    delay(1);
+    */
+>>>>>>> 617409340d25203ef92c93e3c9f86e365149d3b7
   }
 }
 
