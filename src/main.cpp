@@ -3,6 +3,7 @@
 #include <DFRobot_BMP388_SPI.h>
 #include <Adafruit_BNO055.h>
 #include <wiring_private.h>
+#include <NMEAGPS.h>
 #include "min.h"
 
 #define LED_PIN SCL
@@ -81,13 +82,18 @@ void setup() {
   bmp.begin();
   SD.begin(SD_CS);
 
+  NMEAGPS gps;
+  gps_fix fix;
   while (true) {
-
+    if (gps.available(SerialGPS)) {
+      SerialUSB.print(fix.longitude());
+    }
+    delay(100);
     // SerialUSB.println("HEATER DISABLED. ENABLE ME");
 
-    //digitalWrite(LED_PIN, HIGH);
+    //
     //delay(300);
-    //digitalWrite(LED_PIN, LOW);
+    //
 
     // SerialUSB.print("Pressure: ");
     // SerialUSB.println(bmp.readPressure());
@@ -127,9 +133,6 @@ void setup() {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
     }*/
-    if (SerialGPS.available() > 0)
-      SerialUSB.write(SerialGPS.read());
-    delay(1);
   }
 }
 
