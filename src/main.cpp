@@ -9,7 +9,7 @@
 #include "bmg160_support.hpp"
 
 #define LED_PIN SCL
-#define BMP_CS 34
+#define BMP_CS 12
 #define BMP2_CS 26
 #define SD_CS 5
 #define ACCEL_CS 13
@@ -113,10 +113,9 @@ void setup() {
   SerialUSB.begin(115200);
 
   DFRobot_BMP388_SPI bmp(BMP_CS);
-  DFRobot_BMP388_SPI bmp2(BMP2_CS);
+  //DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
 
   bmp.begin();
-  bmp2.begin();
   SD.begin(SD_CS);
 
   NMEAGPS gps;
@@ -132,12 +131,16 @@ void setup() {
       if (gps.available(SerialGPS)) {
         fix = gps.read();
         SerialUSB.print(" Alt:");
-        printL(SerialUSB,fix.altitude_cm());
+        SerialUSB.print(fix.altitude());
         SerialUSB.print(" Lat:");
         printL(SerialUSB,fix.latitudeL());
         SerialUSB.print(" Lon:");
         printL(SerialUSB,fix.longitudeL());
       }
+      
+      SerialUSB.print(" P:");
+      SerialUSB.print(bmp.readPressure());
+
       SerialUSB.println();
       delay(100);
     }
