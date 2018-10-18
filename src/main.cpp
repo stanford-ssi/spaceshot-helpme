@@ -132,11 +132,11 @@ void setup() {
       if (gps.available(SerialGPS)) {
         fix = gps.read();
         SerialUSB.print(" Alt:");
-        printL(SerialUSB,fix.altitude_cm);
+        printL(SerialUSB,fix.altitude_cm());
         SerialUSB.print(" Lat:");
-        printL(SerialUSB,fix.latitudeL);
+        printL(SerialUSB,fix.latitudeL());
         SerialUSB.print(" Lon:");
-        printL(SerialUSB,fix.longitudeL);
+        printL(SerialUSB,fix.longitudeL());
       }
       SerialUSB.println();
       delay(100);
