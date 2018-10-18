@@ -3,8 +3,9 @@
 #include <DFRobot_BMP388_SPI.h>
 #include <wiring_private.h>
 #include <NMEAGPS.h>
+#include <GPSport.h>
 #include "min.h"
-//#include "bma2x2_support.hpp"
+#include "bma2x2_support.hpp"
 #include "bmg160_support.hpp"
 
 #define LED_PIN SCL
@@ -34,6 +35,33 @@ void SERCOM1_Handler()
 void SERCOM2_Handler()
 {
   SerialGPS.IrqHandler();
+}
+
+static void printL( Print & outs, int32_t degE7 )
+{
+  // Extract and print negative sign
+  if (degE7 < 0) {
+    degE7 = -degE7;
+    outs.print( '-' );
+  }
+
+  // Whole degrees
+  int32_t deg = degE7 / 10000000L;
+  outs.print( deg );
+  outs.print( '.' );
+
+  // Get fractional degrees
+  degE7 -= deg*10000000L;
+
+  // Print leading zeroes, if needed
+  int32_t factor = 1000000L;
+  while ((degE7 < factor) && (factor > 1L)){
+    outs.print( '0' );
+    factor /= 10L;
+  }
+  
+  // Print fractional degrees
+  outs.print( degE7 );
 }
 
 uint16_t min_tx_space(uint8_t port) {
@@ -82,7 +110,7 @@ void setup() {
   digitalWrite(GYRO_CS, HIGH);
   digitalWrite(ADXL_CS, HIGH);
 
-  SerialUSB.begin(9600);
+  SerialUSB.begin(115200);
 
   DFRobot_BMP388_SPI bmp(BMP_CS);
   DFRobot_BMP388_SPI bmp2(BMP2_CS);
@@ -93,16 +121,27 @@ void setup() {
 
   NMEAGPS gps;
   gps_fix fix;
-  while (true) {
-    /* if (gps.available(SerialGPS)) {
-      SerialUSB.print(fix.longitude());
-    }
-    delay(100); */
 
     delay(2000);
-    //bma2x2_data_readout_template();
-    SerialUSB.println("Test1");
-    bmg160_data_readout_template();
+
+    while(true){
+      bmg160_data_readout_template();
+      bma2x2_data_readout_template();
+      
+      delay(100);
+      if (gps.available(SerialGPS)) {
+        fix = gps.read();
+        SerialUSB.print(" Alt:");
+        printL(SerialUSB,fix.altitude_cm);
+        SerialUSB.print(" Lat:");
+        printL(SerialUSB,fix.latitudeL);
+        SerialUSB.print(" Lon:");
+        printL(SerialUSB,fix.longitudeL);
+      }
+      SerialUSB.println();
+      delay(100);
+    }
+
     // SerialUSB.println("HEATER DISABLED. ENABLE ME");
 
     //
@@ -152,7 +191,7 @@ void setup() {
       SerialUSB.write(SerialGPS.read());
     delay(1);
     */
-  }
+  
 }
 
 void loop() {  

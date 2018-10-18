@@ -72,123 +72,37 @@ struct bmg160_t bmg160;
 s32 bmg160_data_readout_template(void)
 {
 	/* Gyro */
-	/* variable used for read the sensor data*/
-	s16	v_gyro_datax_s16, v_gyro_datay_s16, v_gyro_dataz_s16 = BMG160_INIT_VALUE;
 	/* structure used for read the sensor data - xyz*/
 	struct bmg160_data_t data_gyro;
-	/* structure used for read the sensor data - xyz and interrupt status*/
-	struct bmg160_data_t gyro_xyzi_data;
-	/* variable used for read the gyro bandwidth data*/
-	u8	v_gyro_value_u8 = BMG160_INIT_VALUE;
 	/* variable used for set the gyro bandwidth data*/
 	u8 v_bw_u8 = BMG160_INIT_VALUE;
 	/* result of communication results*/
 	s32 com_rslt = ERROR;
 
-/*-------------------------------------------------------------------------*
- *********************** START INITIALIZATION ***********************
- *-------------------------------------------------------------------------*/
-SPI_routine();
- /*	Based on the user need configure I2C or SPI interface.
-  *	It is example code to explain how to use the bmg160 API*/
-  
-  	//I2C_routine();
-	
-
-/*--------------------------------------------------------------------------*
- *  This function used to assign the value/reference of
- *	the following parameters
- *	Gyro I2C address
- *	Bus Write
- *	Bus read
- *	Gyro Chip id
- *----------------------------------------------------------------------------*/
+	SPI_routine();
 	com_rslt = bmg160_init(&bmg160);
-/*----------------------------------------------------------------------------*/
-/*	For initialization it is required to set the mode of the sensor as "NORMAL"
- *	data acquisition/read/write is possible in this mode
- *	by using the below API able to set the power mode as NORMAL
- *	NORMAL mode set from the register 0x11 and 0x12
- *	While sensor in the NORMAL mode idle time of at least 2us(micro seconds)
- *	is required to write/read operations
- *	0x11 -> bit 5,7 -> set value as BMG160_INIT_VALUE
- *	0x12 -> bit 6,7 -> set value as BMG160_INIT_VALUE
- *	Note:
- *		If the sensor is in the fast power up mode idle time of least
- *		450us(micro seconds) required for write/read operations
- */
-
-/*-------------------------------------------------------------------------*/
-	/* Set the gyro power mode as NORMAL*/
 	com_rslt += bmg160_set_power_mode(BMG160_MODE_NORMAL);
-/*--------------------------------------------------------------------------*
-************************* END INITIALIZATION ******************************
-*--------------------------------------------------------------------------*/
-/*------------------------------------------------------------------------*
-************************* START GET and SET FUNCTIONS DATA ***************
-*--------------------------------------------------------------------------*/
+
 /* This API used to Write the bandwidth of the gyro sensor
 	input value have to be give 0x10 bit BMG160_INIT_VALUE to 3
 	The bandwidth set from the register */
 	v_bw_u8 = C_BMG160_BW_230HZ_U8X;/* set gyro bandwidth of 230Hz*/
 	com_rslt += bmg160_set_bw(v_bw_u8);
 
-/* This API used to read back the written value of bandwidth for gyro*/
-	com_rslt += bmg160_get_bw(&v_gyro_value_u8);
-/*---------------------------------------------------------------------*
-************************* END GET and SET FUNCTIONS ********************
-*----------------------------------------------------------------------*/
-/*---------------------------------------------------------------------*
-************************* START READ SENSOR DATA(X,Y and Z axis) *********
-*-------------------------------------------------------------------------*/
-/******************* Read Gyro data xyz**********************/
-	com_rslt += bmg160_get_data_X(&v_gyro_datax_s16);/* Read the gyro X data*/
-
-	com_rslt += bmg160_get_data_Y(&v_gyro_datay_s16);/* Read the gyro Y data*/
-
-	com_rslt += bmg160_get_data_Z(&v_gyro_dataz_s16);/* Read the gyro Z data*/
-
 /* accessing the  bmg160_data_t parameter by using data_gyro*/
 
-	while(true){
 		com_rslt = bmg160_get_data_XYZ(&data_gyro);/* Read the gyro XYZ data*/
-		SerialUSB.print("ERR:");
-		SerialUSB.print(com_rslt);
-		SerialUSB.print(" X:");
+
+		
+		SerialUSB.print(" GX:");
 		SerialUSB.print(data_gyro.datax);
-		SerialUSB.print(" Y:");
+		SerialUSB.print(" GY:");
 		SerialUSB.print(data_gyro.datay);
-		SerialUSB.print(" Z:");
-		SerialUSB.println(data_gyro.dataz);
-		delay(100);
-	}
+		SerialUSB.print(" GZ:");
+		SerialUSB.print(data_gyro.dataz);
+		
 
-
-/* accessing the bmg160_data_t parameter by using gyro_xyzi_data*/
-/* Read the gyro XYZ data and interrupt status*/
-	com_rslt += bmg160_get_data_XYZI(&gyro_xyzi_data);
-/*--------------------------------------------------------------------------
-************************* END READ SENSOR DATA(X,Y and Z axis) *************
-*----------------------------------------------------------------------------*/
-/*---------------------------------------------------------------------------*
-*********************** START DE-INITIALIZATION *****************************
-*--------------------------------------------------------------------------*/
-/*	For de-initialization it is required to set the mode of
- *	the sensor as "DEEPSUSPEND"
- *	the device reaches the lowest power consumption only
- *	interface selection is kept alive
- *	No data acquisition is performed
- *	The DEEPSUSPEND mode set from the register 0x11 bit 5
- *	by using the below API able to set the power mode as DEEPSUSPEND
- *	For the read/ write operation it is required to provide least 450us
- *	micro second delay*/
-
-	com_rslt += bmg160_set_power_mode(BMG160_MODE_DEEPSUSPEND);
-
-/*--------------------------------------------------------------------------*
-*********************** END DE-INITIALIZATION **************************
-*---------------------------------------------------------------------------*/
-return com_rslt;
+	//com_rslt += bmg160_set_power_mode(BMG160_MODE_DEEPSUSPEND);
 }
 
 

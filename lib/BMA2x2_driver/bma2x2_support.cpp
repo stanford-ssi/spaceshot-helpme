@@ -105,151 +105,42 @@ struct bma2x2_t bma2x2;
 
 s32 bma2x2_data_readout_template(void)
 {
-
-	/*----------------------------------------------------------------------------*
-*  struct bma2x2_t parameters can be accessed by using bma2x2
- *	bma2x2_t having the following parameters
- *	Bus write function pointer: BMA2x2_WR_FUNC_PTR
- *	Bus read function pointer: BMA2x2_RD_FUNC_PTR
- *	Burst read function pointer: BMA2x2_BRD_FUNC_PTR
- *	Delay function pointer: delay_msec
- *	I2C address: dev_addr
- *	Chip id of the sensor: chip_id
- *---------------------------------------------------------------------------*/
-
 	/*Local variables for reading accel x, y and z data*/
-	s16	accel_x_s16, accel_y_s16, accel_z_s16 = BMA2x2_INIT_VALUE;
-
-	/* bma2x2acc_data structure used to read accel xyz data*/
-	struct bma2x2_accel_data sample_xyz;
-	/* bma2x2acc_data_temp structure used to read
-		accel xyz and temperature data*/
 	struct bma2x2_accel_data_temp sample_xyzt;
 	/* Local variable used to assign the bandwidth value*/
 	u8 bw_value_u8 = BMA2x2_INIT_VALUE;
-	/* Local variable used to set the bandwidth value*/
-	u8 banwid = BMA2x2_INIT_VALUE;
 	/* status of communication*/
 	s32 com_rslt = ERROR;
-
-
-/*********************** START INITIALIZATION ************************
-  *	Based on the user need configure I2C or SPI interface.
-  *	It is example code to explain how to use the bma2x2 API*/
-	
- /*--------------------------------------------------------------------------*
- *  This function used to assign the value/reference of
- *	the following parameters
- *	I2C address
- *	Bus Write
- *	Bus read
- *	Chip id
- *-------------------------------------------------------------------------*/
-	SPI_routine();
-	com_rslt = bma2x2_init(&bma2x2);
-	SerialUSB.print("ERR1:");
-	SerialUSB.println(com_rslt);
-
-/*	For initialization it is required to set the mode of
- *	the sensor as "NORMAL"
- *	NORMAL mode is set from the register 0x11 and 0x12
- *	0x11 -> bit 5,6,7 -> set value as 0
- *	0x12 -> bit 5,6 -> set value as 0
- *	data acquisition/read/write is possible in this mode
- *	by using the below API able to set the power mode as NORMAL
- *	For the Normal/standby/Low power 2 mode Idle time
-		of at least 2us(micro seconds)
- *	required for read/write operations*/
-	/* Set the power mode as NORMAL*/
-	com_rslt = bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
-	SerialUSB.print("ERR2:");
-	SerialUSB.println(com_rslt);
-/*	Note:
-	* For the Suspend/Low power1 mode Idle time of
-		at least 450us(micro seconds)
-	* required for read/write operations*/
-
-/************************* END INITIALIZATION *************************/
-
-/*------------------------------------------------------------------------*
-************************* START GET and SET FUNCTIONS DATA ****************
-*---------------------------------------------------------------------------*/
-	/* This API used to Write the bandwidth of the sensor input
-	value have to be given
-	bandwidth is set from the register 0x10 bits from 1 to 4*/
-	bw_value_u8 = 0x08;/* set bandwidth of 7.81Hz*/
-	com_rslt = bma2x2_set_bw(bw_value_u8);
-	SerialUSB.print("ERR3:");
-	SerialUSB.println(com_rslt);
-
-	/* This API used to read back the written value of bandwidth*/
-	com_rslt = bma2x2_get_bw(&banwid);
-	SerialUSB.print("ERR4:");
-	SerialUSB.println(com_rslt);
-/*-----------------------------------------------------------------*
-************************* END GET and SET FUNCTIONS ****************
-*-------------------------------------------------------------------*/
-/*------------------------------------------------------------------*
-************************* START READ SENSOR DATA(X,Y and Z axis) ********
-*---------------------------------------------------------------------*/
-	/* accessing the bma2x2acc_data parameter by using sample_xyz*/
-	/* Read the accel XYZ data*/
-	while(true){
-		com_rslt = bma2x2_read_accel_xyz(&sample_xyz);
-		SerialUSB.print("ERR:");
-		SerialUSB.print(com_rslt);
-		SerialUSB.print(" X:");
-		SerialUSB.print(sample_xyz.x);
-		SerialUSB.print(" Y:");
-		SerialUSB.print(sample_xyz.y);
-		SerialUSB.print(" Z:");
-		SerialUSB.println(sample_xyz.z);
-		delay(100);
-	}
-
-/*--------------------------------------------------------------------*
-************************* END READ SENSOR DATA(X,Y and Z axis) ************
-*-------------------------------------------------------------------------*/
-/*-----------------------------------------------------------------------*
-************************* START DE-INITIALIZATION ***********************
-*-------------------------------------------------------------------------*/
-/*	For de-initialization it is required to set the mode of
- *	the sensor as "DEEP SUSPEND"
- *	DEEP SUSPEND mode is set from the register 0x11
- *	0x11 -> bit 5 -> set value as 1
- *	the device reaches the lowest power consumption only
- *	interface selection is kept alive
- *	No data acquisition is performed
- *	by using the below API able to set the power mode as DEEPSUSPEND*/
- /* Set the power mode as DEEPSUSPEND*/
-	com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_DEEP_SUSPEND);
-/*---------------------------------------------------------------------*
-************************* END DE-INITIALIZATION **********************
-*---------------------------------------------------------------------*/
-return com_rslt;
-}
-#define BMA2x2_API
-#ifdef BMA2x2_API
-
-/*---------------------------------------------------------------------------*
- * The following function is used to map the SPI bus read, write and delay
- * with global structure bma2x2_t
- *--------------------------------------------------------------------------*/
-s8 SPI_routine(void)
-{
-/*--------------------------------------------------------------------------*
- *  By using bma2x2 the following structure parameter can be accessed
- *	Bus write function pointer: BMA2x2_WR_FUNC_PTR
- *	Bus read function pointer: BMA2x2_RD_FUNC_PTR
- *	Delay function pointer: delay_msec
- *--------------------------------------------------------------------------*/
 
 	bma2x2.bus_write = BMA2x2_SPI_bus_write;
 	bma2x2.bus_read = BMA2x2_SPI_bus_read;
 	bma2x2.delay_msec = BMA2x2_delay_msek;
+	
+	com_rslt = bma2x2_init(&bma2x2);
 
-	return BMA2x2_INIT_VALUE;
+	com_rslt = bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+
+	/* This API used to Write the bandwidth of the sensor input
+	value have to be given
+	bandwidth is set from the register 0x10 bits from 1 to 4*/	
+	bw_value_u8 = 0x08;/* set bandwidth of 7.81Hz*/
+	com_rslt = bma2x2_set_bw(bw_value_u8);
+
+	com_rslt = bma2x2_read_accel_xyzt(&sample_xyzt);
+	SerialUSB.print(" AX:");
+	SerialUSB.print(sample_xyzt.x);
+	SerialUSB.print(" AY:");
+	SerialUSB.print(sample_xyzt.y);
+	SerialUSB.print(" AZ:");
+	SerialUSB.print(sample_xyzt.z);
+	SerialUSB.print(" AT:");
+	SerialUSB.print(sample_xyzt.temp);
+
+	//com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_DEEP_SUSPEND);
 }
+#define BMA2x2_API
+#ifdef BMA2x2_API
+
 
 /************** I2C/SPI buffer length ******/
 #define	I2C_BUFFER_LEN 8
