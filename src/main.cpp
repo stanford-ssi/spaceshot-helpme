@@ -58,7 +58,11 @@ void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
 struct min_context min_ctx_s6c;
 
 void setup() {
+
   SerialGPS.begin(9600);
+  SerialUSB.begin(9600);
+  SerialS6C.begin(9600);
+  
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
   pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
   
@@ -82,8 +86,6 @@ void setup() {
   digitalWrite(ACCEL_CS, HIGH);
   digitalWrite(GYRO_CS, HIGH);
   digitalWrite(ADXL_CS, HIGH);
-
-  SerialUSB.begin(9600);
 
   DFRobot_BMP388_SPI bmp(BMP_CS);
   DFRobot_BMP388_SPI bmp2(BMP2_CS);
