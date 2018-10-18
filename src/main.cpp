@@ -1,7 +1,6 @@
 #include <SPI.h>
 #include <SD.h>
 #include <DFRobot_BMP388_SPI.h>
-#include <Adafruit_BNO055.h>
 #include <wiring_private.h>
 #include <NMEAGPS.h>
 #include "min.h"
