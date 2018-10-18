@@ -95,18 +95,15 @@ void setup() {
   NMEAGPS gps;
   gps_fix fix;
   while (true) {
-<<<<<<< HEAD
-    if (gps.available(SerialGPS)) {
+    /* if (gps.available(SerialGPS)) {
       SerialUSB.print(fix.longitude());
     }
-    delay(100);
-=======
+    delay(100); */
 
     delay(2000);
     //bma2x2_data_readout_template();
     SerialUSB.println("Test1");
     bmg160_data_readout_template();
->>>>>>> 617409340d25203ef92c93e3c9f86e365149d3b7
     // SerialUSB.println("HEATER DISABLED. ENABLE ME");
 
     //
@@ -151,14 +148,11 @@ void setup() {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
     }*/
-<<<<<<< HEAD
-=======
     /*
     if (SerialGPS.available() > 0)
       SerialUSB.write(SerialGPS.read());
     delay(1);
     */
->>>>>>> 617409340d25203ef92c93e3c9f86e365149d3b7
   }
 }
 
