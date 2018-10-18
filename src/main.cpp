@@ -127,7 +127,7 @@ void setup() {
       bmg160_data_readout_template();
       bma2x2_data_readout_template();
       
-      delay(100);
+      /*delay(100); //GPS is glitchy...
       if (gps.available(SerialGPS)) {
         fix = gps.read();
         SerialUSB.print(" Alt:");
@@ -137,22 +137,14 @@ void setup() {
         SerialUSB.print(" Lon:");
         printL(SerialUSB,fix.longitudeL());
       }
-      
+      */
+
       SerialUSB.print(" P:");
       SerialUSB.print(bmp.readPressure());
-
+      SerialUSB.println("HEATER DISABLED. ENABLE ME");
       SerialUSB.println();
       delay(100);
     }
-
-    // SerialUSB.println("HEATER DISABLED. ENABLE ME");
-
-    //
-    //delay(300);
-    //
-
-    // SerialUSB.print("Pressure: ");
-    // SerialUSB.println(bmp.readPressure());
     
 
     /*File myFile;
@@ -189,12 +181,7 @@ void setup() {
       // if the file didn't open, print an error:
       SerialUSB.println("error opening test.txt");
     }*/
-    /*
-    if (SerialGPS.available() > 0)
-      SerialUSB.write(SerialGPS.read());
-    delay(1);
-    */
-  
+    
 }
 
 void loop() {  
