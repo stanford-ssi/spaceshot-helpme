@@ -113,14 +113,13 @@ void setup() {
   // initialize USB connection
   SerialUSB.begin(9600);
   
-  // initialize pressure sensor
-  DFRobot_BMP388_SPI bmp(BMP_CS);
-  bmp.begin();
-  // DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
-
   // initialize SD card
   SD.begin(SD_CS);
-  File logFile = SD.open("log.csv", FILE_WRITE);
+  char fname[32];
+  randomSeed(micros());
+  sprintf(fname, "%07d.csv", random(1000000));
+  File logFile = SD.open(fname, FILE_WRITE | O_CREAT);
+
   if (logFile) {
     logFile.println("pressure,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,"
                     "temperature,latitude,longitude,altitude,time");
@@ -133,6 +132,11 @@ void setup() {
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
   pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
   
+ // initialize pressure sensor
+  DFRobot_BMP388_SPI bmp(BMP_CS);
+  bmp.begin();
+  // DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
+
   // initialize accelerometer and gyroscope
   bma2x2_init_accel();
   bmg160_init_gyro();
@@ -142,8 +146,10 @@ void setup() {
   
   struct bma2x2_accel_data_temp accel_data;
   struct bmg160_data_t gyro_data;
-  for (int i = 0; i < 10; i++) {
+  while (true) {
+    SerialUSB.println("Logging...");
     if (logFile) {
+      SerialUSB.println("Found file...");
       logFile.print(bmp.readPressure());
       logFile.print(",");
 
@@ -174,7 +180,7 @@ void setup() {
       logFile.print(",");
       logFile.print(fix.dateTime_ms());
       logFile.println(",");
-      
+
       logFile.flush();
 
       delay(50);
@@ -183,8 +189,6 @@ void setup() {
       digitalWrite(LED_PIN, LOW);
     }
   }
-
-  logFile.close();
 }
 
 void loop() {}
