@@ -84,17 +84,17 @@ void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
 
 struct min_context min_ctx_s6c;
 
-void setup() {
-  SerialGPS.begin(9600);
-  pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
-  pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
-  
+struct bma2x2_t bma;
+
+void setup() {  
+  // initialize ports
   PORT->Group[0].DIR.reg = PORT_PA27;
   PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
   //COMMEMNT OUT B4 LAUNCH
   PORT->Group[0].DIR.reg |= PORT_PA28;
   PORT->Group[0].OUTSET.reg = (1UL << (28 % 32));
   
+  //initialize pins
   pinMode(LED_PIN, OUTPUT);
   pinMode(SD_CS, OUTPUT);
   pinMode(ACCEL_CS, OUTPUT);
@@ -110,79 +110,81 @@ void setup() {
   digitalWrite(GYRO_CS, HIGH);
   digitalWrite(ADXL_CS, HIGH);
 
-  SerialUSB.begin(115200);
-
+  // initialize USB connection
+  SerialUSB.begin(9600);
+  
+  // initialize pressure sensor
   DFRobot_BMP388_SPI bmp(BMP_CS);
-  //DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
-
   bmp.begin();
-  SD.begin(SD_CS);
+  // DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
 
+  // initialize SD card
+  SD.begin(SD_CS);
+  File logFile = SD.open("log.csv", FILE_WRITE);
+  if (logFile) {
+    logFile.println("pressure,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,"
+                    "temperature,latitude,longitude,altitude,time");
+  }
+
+  // initialize GPS
   NMEAGPS gps;
   gps_fix fix;
+  SerialGPS.begin(9600);
+  pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
+  pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
+  
+  // initialize accelerometer and gyroscope
+  bma2x2_init_accel();
+  bmg160_init_gyro();
 
-    delay(2000);
+  // wait for sensors to boot
+  delay(2000);
+  
+  struct bma2x2_accel_data_temp accel_data;
+  struct bmg160_data_t gyro_data;
+  for (int i = 0; i < 10; i++) {
+    if (logFile) {
+      logFile.print(bmp.readPressure());
+      logFile.print(",");
 
-    while(true){
-      bmg160_data_readout_template();
-      bma2x2_data_readout_template();
+      accel_data = bma2x2_read_accel();
+      logFile.print(accel_data.x);
+      logFile.print(",");
+      logFile.print(accel_data.y);
+      logFile.print(",");
+      logFile.print(accel_data.z);
+      logFile.print(",");
+
+      gyro_data = bmg160_read_gyro();
+      logFile.print(gyro_data.datax);
+      logFile.print(",");
+      logFile.print(gyro_data.datay);
+      logFile.print(",");
+      logFile.print(gyro_data.dataz);
+      logFile.print(",");
+
+      logFile.print(bmp.readTemperature());
+      logFile.print(",");
+
+      logFile.print(fix.latitudeL());
+      logFile.print(",");
+      logFile.print(fix.longitudeL());
+      logFile.print(",");
+      logFile.print(fix.altitude());
+      logFile.print(",");
+      logFile.print(fix.dateTime_ms());
+      logFile.println(",");
       
-      /*delay(100); //GPS is glitchy...
-      if (gps.available(SerialGPS)) {
-        fix = gps.read();
-        SerialUSB.print(" Alt:");
-        SerialUSB.print(fix.altitude());
-        SerialUSB.print(" Lat:");
-        printL(SerialUSB,fix.latitudeL());
-        SerialUSB.print(" Lon:");
-        printL(SerialUSB,fix.longitudeL());
-      }
-      */
+      logFile.flush();
 
-      SerialUSB.print(" P:");
-      SerialUSB.print(bmp.readPressure());
-      SerialUSB.println("HEATER DISABLED. ENABLE ME");
-      SerialUSB.println();
-      delay(100);
+      delay(50);
+      digitalWrite(LED_PIN, HIGH);
+      delay(50);
+      digitalWrite(LED_PIN, LOW);
     }
-    
+  }
 
-    /*File myFile;
-    // open the file. note that only one file can be open at a time,
-    // so you have to close this one before opening another.
-    if (SD.remove("test.txt")) SerialUSB.println("Removed file");
-    delay(100);
-    myFile = SD.open("test.txt", FILE_WRITE);
-
-    // if the file opened okay, write to it:
-    if (myFile) {
-      SerialUSB.print("Writing to test.txt...");
-      myFile.println("testing 1, 2, 3.");
-      // close the file:
-      myFile.close();
-      SerialUSB.println("done.");
-    } else {
-      // if the file didn't open, print an error:
-      SerialUSB.println("error opening test.txt");
-    }
-
-    // re-open the file for reading:
-    myFile = SD.open("test.txt");
-    if (myFile) {
-      SerialUSB.println("test.txt:");
-
-      // read from the file until there's nothing else in it:
-      while (myFile.available()) {
-	SerialUSB.write(myFile.read());
-      }
-      // close the file:
-      myFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      SerialUSB.println("error opening test.txt");
-    }*/
-    
+  logFile.close();
 }
 
-void loop() {  
-}
+void loop() {}

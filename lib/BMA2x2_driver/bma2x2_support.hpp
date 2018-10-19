@@ -60,6 +60,12 @@ void BMA2x2_delay_msek(u32 msek);
 
 s32 bma2x2_data_readout_template(void);
 
+void bma2x2_init_accel(void);
+bma2x2_accel_data_temp bma2x2_read_accel(void);
+
+
+
+
 /*----------------------------------------------------------------------------*
 *  V_BMA2x2RESOLUTION_u8R used for selecting the accelerometer resolution
  *	12 bit

@@ -55,6 +55,9 @@ void BMG160_delay_msek(u32 msek);
  *	\return: communication result
  */
 s32 bmg160_data_readout_template(void);
+void bmg160_init_gyro(void);
+bmg160_data_t bmg160_read_gyro(void);
+
 /*---------------------------------------------------------------------------*
 *  struct bmg160_t parameters can be accessed by using bmg160
  *	bmg160_t having the following parameters
