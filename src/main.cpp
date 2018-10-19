@@ -16,15 +16,20 @@
 #define GYRO_CS 3
 #define ADXL_CS 0
 
-#define SRAD_TX 10
-#define SRAD_RX 11
+#define FET1 14
+#define FET2 30
+#define FET3 31
+#define HEATER 27
+
+#define SRAD_TX 11
+#define SRAD_RX 10
 #define SGPS_TX 4
 #define SGPS_RX 1
 
 #define MODE_RECEIVING 1
 #define MODE_TRANSMITTING 2
 
-Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
+Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
 Uart SerialGPS(&sercom2, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
  
 void SERCOM1_Handler()
@@ -37,31 +42,22 @@ void SERCOM2_Handler()
   SerialGPS.IrqHandler();
 }
 
-static void printL( Print & outs, int32_t degE7 )
-{
-  // Extract and print negative sign
-  if (degE7 < 0) {
-    degE7 = -degE7;
-    outs.print( '-' );
-  }
+void do_cutdown(){
+  digitalWrite(FET1,LOW);
+  digitalWrite(FET2,LOW);
+  digitalWrite(FET3,LOW);
+}
 
-  // Whole degrees
-  int32_t deg = degE7 / 10000000L;
-  outs.print( deg );
-  outs.print( '.' );
-
-  // Get fractional degrees
-  degE7 -= deg*10000000L;
-
-  // Print leading zeroes, if needed
-  int32_t factor = 1000000L;
-  while ((degE7 < factor) && (factor > 1L)){
-    outs.print( '0' );
-    factor /= 10L;
-  }
+void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port) {
+  min_payload++;
+  len_payload--;
+  SerialUSB.write(min_payload,len_payload);
+  SerialUSB.println();
   
-  // Print fractional degrees
-  outs.print( degE7 );
+  if(min_payload[0]=='H' && min_payload[1]=='E'){
+    SerialUSB.println("CUTTTTTDOWNWNWNW");
+    do_cutdown();
+  }
 }
 
 uint16_t min_tx_space(uint8_t port) {
@@ -88,12 +84,10 @@ void setup() {
   SerialGPS.begin(9600);
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
   pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
-  
-  PORT->Group[0].DIR.reg = PORT_PA27;
-  PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
-  //COMMEMNT OUT B4 LAUNCH
-  PORT->Group[0].DIR.reg |= PORT_PA28;
-  PORT->Group[0].OUTSET.reg = (1UL << (28 % 32));
+
+  SerialS6C.begin(9600);
+  pinPeripheral(SRAD_RX, PIO_SERCOM);
+  pinPeripheral(SRAD_TX, PIO_SERCOM);
   
   pinMode(LED_PIN, OUTPUT);
   pinMode(SD_CS, OUTPUT);
@@ -102,6 +96,16 @@ void setup() {
   pinMode(ADXL_CS, OUTPUT);
   pinMode(GYRO_CS, OUTPUT);
   pinMode(BMP2_CS,OUTPUT);
+
+  pinMode(FET1, OUTPUT);
+  pinMode(FET2, OUTPUT);
+  pinMode(FET3, OUTPUT);
+  pinMode(HEATER, OUTPUT);//DONT FORGET!
+
+  digitalWrite(FET1,HIGH);
+  digitalWrite(FET2,HIGH);
+  digitalWrite(FET3,HIGH);
+  digitalWrite(HEATER,HIGH);
 
   digitalWrite(BMP2_CS,HIGH);
   digitalWrite(SD_CS, HIGH);
@@ -115,6 +119,8 @@ void setup() {
   DFRobot_BMP388_SPI bmp(BMP_CS);
   //DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
 
+  min_init_context(&min_ctx_s6c, 0);
+
   bmp.begin();
   SD.begin(SD_CS);
 
@@ -123,7 +129,17 @@ void setup() {
 
     delay(2000);
 
+    char serial_buffer_S6C[32];
+
     while(true){
+      int available = SerialS6C.available();
+		  if (available > 0) {
+				if (available > 32) available = 32;
+				size_t buf_len = SerialS6C.readBytes(serial_buffer_S6C, available);
+				min_poll(&min_ctx_s6c, (uint8_t*)serial_buffer_S6C, (uint8_t)buf_len);
+      }
+    }
+
       bmg160_data_readout_template();
       bma2x2_data_readout_template();
       
@@ -182,7 +198,7 @@ void setup() {
       SerialUSB.println("error opening test.txt");
     }*/
     
-}
+
 
 void loop() {  
 }
