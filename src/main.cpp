@@ -245,12 +245,12 @@ void setup()
         logFile.print(gyro_data.dataz);
         logFile.print(",");
 
-        logFile.print(temp);
+        logFile.print(temp*100);
         logFile.print(",");
 
-        logFile.print(gps.location.lat());
+        logFile.print(long(gps.location.lat()*1000000));
         logFile.print(",");
-        logFile.print(gps.location.lng());
+        logFile.print(long(gps.location.lng()*1000000));
         logFile.print(",");
         logFile.print(gps.altitude.meters());
         logFile.print(",");
