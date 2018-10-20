@@ -112,6 +112,8 @@ struct bma2x2_t bma;
 
 uint32_t last_tx = millis();
 uint32_t last_log = millis();
+uint32_t start = millis();
+bool cutdown_state = false;
 
 void setup()
 {
@@ -272,6 +274,17 @@ void setup()
         PrintHex8(msg, msg_len+2);
 
         min_send_frame(&min_ctx_s6c, 0, msg, msg[1] + 2);
+      }
+
+      if(millis() > start + 5*60*1000){
+        cutdown_state = true;
+        Serial.println("Timer ran out!");
+        do_cutdown();
+      }
+
+      if(cutdown_state && bmp_alt < -20.0){
+        Serial.println("Low Enough!");
+        do_main();
       }
 
       SerialUSB.print("LAT: ");
