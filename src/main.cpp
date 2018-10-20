@@ -276,14 +276,14 @@ void setup()
         min_send_frame(&min_ctx_s6c, 0, msg, msg[1] + 2);
       }
 
-      if(millis() > start + 5*60*1000){
+      if(((long)millis()) > 2.5*60*60*1000){
         cutdown_state = true;
-        Serial.println("Timer ran out!");
+        SerialUSB.println("Timer ran out!");
         do_cutdown();
       }
 
-      if(cutdown_state && bmp_alt < -20.0){
-        Serial.println("Low Enough!");
+      if(cutdown_state && bmp_alt < 500.0){
+        SerialUSB.println("Low Enough!");
         do_main();
       }
 
@@ -295,6 +295,8 @@ void setup()
       SerialUSB.print(bmp_alt);
       SerialUSB.print(" TIME: ");
       SerialUSB.print(gps.time.value());
+      SerialUSB.print(" Countdown: ");
+      SerialUSB.print(((long) millis())-2.5*60*60*1000);
       SerialUSB.println();
       
     }
