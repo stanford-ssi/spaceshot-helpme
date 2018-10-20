@@ -105,6 +105,21 @@ s32 bmg160_data_readout_template(void)
 	//com_rslt += bmg160_set_power_mode(BMG160_MODE_DEEPSUSPEND);
 }
 
+void bmg160_init_gyro(void) {
+	SPI_routine();
+	bmg160_init(&bmg160);
+	bmg160_set_power_mode(BMG160_MODE_NORMAL);
+
+	u8 v_bw_u8 = C_BMG160_BW_230HZ_U8X;
+	bmg160_set_bw(v_bw_u8);
+}
+
+bmg160_data_t bmg160_read_gyro(void) {
+	struct bmg160_data_t sample;
+	bmg160_get_data_XYZ(&sample);
+	return sample;
+}
+
 
 /*--------------------------------------------------------------------------*
 *	The following function is used to map the I2C bus read, write, delay and

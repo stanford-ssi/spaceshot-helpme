@@ -2,11 +2,11 @@
 #include <SD.h>
 #include <DFRobot_BMP388_SPI.h>
 #include <wiring_private.h>
-#include <NMEAGPS.h>
-#include <GPSport.h>
 #include "min.h"
 #include "bma2x2_support.hpp"
 #include "bmg160_support.hpp"
+#include "RadioInterface.h"
+#include "TinyGPS.h"
 
 #define LED_PIN SCL
 #define BMP_CS 12
@@ -42,32 +42,36 @@ void SERCOM2_Handler()
   SerialGPS.IrqHandler();
 }
 
-void do_cutdown(){
+void do_cutdown() {
   digitalWrite(FET1,LOW);
   digitalWrite(FET2,LOW);
+}
+
+void do_main() {
   digitalWrite(FET3,LOW);
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port) {
   min_payload++;
   len_payload--;
-  SerialUSB.write(min_payload,len_payload);
-  SerialUSB.println();
   
-  if(min_payload[0]=='H' && min_payload[1]=='E'){
+  if (min_payload[0]=='H' && min_payload[1]=='E'){
     SerialUSB.println("CUTTTTTDOWNWNWNW");
     do_cutdown();
+  } else if (min_payload[0]=='M' && min_payload[1]=='E') {
+    SerialUSB.println("MAIN!!!!!");
+    do_main();
   }
 }
 
 uint16_t min_tx_space(uint8_t port) {
-	uint16_t n = 1;
-	if (port == 0) n = SerialS6C.availableForWrite();
-	return n;
+  uint16_t n = 1;
+  if (port == 0) n = SerialS6C.availableForWrite();
+  return n;
 }
 
 void min_tx_byte(uint8_t port, uint8_t byte) {
-	if (port == 0) SerialS6C.write(&byte, 1U);
+  if (port == 0) SerialS6C.write(&byte, 1U);
 }
 
 uint32_t min_time_ms() {
@@ -80,15 +84,20 @@ void min_tx_finished(uint8_t port) { SerialS6C.flush(); }
 
 struct min_context min_ctx_s6c;
 
-void setup() {
-  SerialGPS.begin(9600);
-  pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
-  pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
+struct bma2x2_t bma;
 
-  SerialS6C.begin(9600);
-  pinPeripheral(SRAD_RX, PIO_SERCOM);
-  pinPeripheral(SRAD_TX, PIO_SERCOM);
+uint32_t last_tx = millis();
+uint32_t last_log = millis();
+
+void setup() {  
+  // initialize ports
+  PORT->Group[0].DIR.reg = PORT_PA27;
+  PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
+  //COMMEMNT OUT B4 LAUNCH
+  PORT->Group[0].DIR.reg |= PORT_PA28;
+  PORT->Group[0].OUTSET.reg = (1UL << (28 % 32));
   
+  //initialize pins
   pinMode(LED_PIN, OUTPUT);
   pinMode(SD_CS, OUTPUT);
   pinMode(ACCEL_CS, OUTPUT);
@@ -97,16 +106,6 @@ void setup() {
   pinMode(GYRO_CS, OUTPUT);
   pinMode(BMP2_CS,OUTPUT);
 
-  pinMode(FET1, OUTPUT);
-  pinMode(FET2, OUTPUT);
-  pinMode(FET3, OUTPUT);
-  pinMode(HEATER, OUTPUT);//DONT FORGET!
-
-  digitalWrite(FET1,HIGH);
-  digitalWrite(FET2,HIGH);
-  digitalWrite(FET3,HIGH);
-  digitalWrite(HEATER,HIGH);
-
   digitalWrite(BMP2_CS,HIGH);
   digitalWrite(SD_CS, HIGH);
   digitalWrite(BMP_CS, HIGH);
@@ -114,91 +113,148 @@ void setup() {
   digitalWrite(GYRO_CS, HIGH);
   digitalWrite(ADXL_CS, HIGH);
 
-  SerialUSB.begin(115200);
+  // initialize USB connection
+  SerialUSB.begin(9600);
 
-  DFRobot_BMP388_SPI bmp(BMP_CS);
-  //DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
-
+  // init S6C BOI
+  SerialS6C.begin(9600);
   min_init_context(&min_ctx_s6c, 0);
-
-  bmp.begin();
+  pinPeripheral(SRAD_RX, PIO_SERCOM);
+  pinPeripheral(SRAD_TX, PIO_SERCOM);
+  
+  // initialize SD card
   SD.begin(SD_CS);
+  char fname[32];
+  randomSeed(micros());
+  sprintf(fname, "%07d.csv", random(1000000));
+  File logFile = SD.open(fname, FILE_WRITE | O_CREAT);
 
-  NMEAGPS gps;
-  gps_fix fix;
+  if (logFile) {
+    logFile.println("altitude_bmp,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,"
+                    "temperature,latitude,longitude,altitude_gps,time");
+  }
 
-    delay(2000);
+  // initialize GPS
+  TinyGPS gps;
+  long lat;
+  long lon;
+  unsigned long fix_age;
+  unsigned long time;
+  unsigned long date;
+  float alt_gps;
+  
+  SerialGPS.begin(9600);
+  pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
+  pinPeripheral(SGPS_TX, PIO_SERCOM_ALT);
+  
+  // initialize pressure sensor
+  DFRobot_BMP388_SPI bmp(BMP_CS);
+  bmp.begin();
+  // DFRobot_BMP388_SPI bmp(BMP2_CS); //This stupid library dosen't store the CS pins seperately...
 
-    char serial_buffer_S6C[32];
+  // initialize accelerometer and gyroscope
+  bma2x2_init_accel();
+  bmg160_init_gyro();
 
-    while(true){
-      int available = SerialS6C.available();
-		  if (available > 0) {
-				if (available > 32) available = 32;
-				size_t buf_len = SerialS6C.readBytes(serial_buffer_S6C, available);
-				min_poll(&min_ctx_s6c, (uint8_t*)serial_buffer_S6C, (uint8_t)buf_len);
+  // wait for sensors to boot
+  delay(2000);
+  
+  struct bma2x2_accel_data_temp accel_data;
+  struct bmg160_data_t gyro_data;
+
+  char serial_buffer_S6C[32];
+  
+  while (true) {
+
+    float bmp_alt = bmp.readAltitude();
+    accel_data = bma2x2_read_accel();
+    gyro_data = bmg160_read_gyro();
+    float temp = bmp.readTemperature();
+
+    while (SerialGPS.available()) {
+      char c = SerialGPS.read();
+      if (gps.encode(c)) {
+	gps.get_position(&lat, &lon, &fix_age);
+	alt_gps = gps.f_altitude();
+	gps.get_datetime(&date, &time, &fix_age);
       }
     }
-
-      bmg160_data_readout_template();
-      bma2x2_data_readout_template();
       
-      /*delay(100); //GPS is glitchy...
-      if (gps.available(SerialGPS)) {
-        fix = gps.read();
-        SerialUSB.print(" Alt:");
-        SerialUSB.print(fix.altitude());
-        SerialUSB.print(" Lat:");
-        printL(SerialUSB,fix.latitudeL());
-        SerialUSB.print(" Lon:");
-        printL(SerialUSB,fix.longitudeL());
+    SerialUSB.println("Logging...");
+    if (millis() > last_log + 10) {
+      if (logFile) {
+      
+	SerialUSB.println("Found file...");
+	logFile.print(bmp_alt);
+	logFile.print(",");
+
+	logFile.print(accel_data.x);
+	logFile.print(",");
+	logFile.print(accel_data.y);
+	logFile.print(",");
+	logFile.print(accel_data.z);
+	logFile.print(",");
+
+	logFile.print(gyro_data.datax);
+	logFile.print(",");
+	logFile.print(gyro_data.datay);
+	logFile.print(",");
+	logFile.print(gyro_data.dataz);
+	logFile.print(",");
+
+	logFile.print(temp);
+	logFile.print(",");
+
+	logFile.print(lat);
+	logFile.print(",");
+	logFile.print(lon);
+	logFile.print(",");
+	logFile.print(alt_gps);
+	logFile.print(",");
+	logFile.print(time);
+	logFile.println(",");
+
+	logFile.flush();
+
+	delay(5);
+	digitalWrite(LED_PIN, HIGH);
+	delay(5);
+	digitalWrite(LED_PIN, LOW);
+      
       }
-      */
-
-      SerialUSB.print(" P:");
-      SerialUSB.print(bmp.readPressure());
-      SerialUSB.println("HEATER DISABLED. ENABLE ME");
-      SerialUSB.println();
-      delay(100);
-    }
-    
-
-    /*File myFile;
-    // open the file. note that only one file can be open at a time,
-    // so you have to close this one before opening another.
-    if (SD.remove("test.txt")) SerialUSB.println("Removed file");
-    delay(100);
-    myFile = SD.open("test.txt", FILE_WRITE);
-
-    // if the file opened okay, write to it:
-    if (myFile) {
-      SerialUSB.print("Writing to test.txt...");
-      myFile.println("testing 1, 2, 3.");
-      // close the file:
-      myFile.close();
-      SerialUSB.println("done.");
-    } else {
-      // if the file didn't open, print an error:
-      SerialUSB.println("error opening test.txt");
+      last_log = millis();
     }
 
-    // re-open the file for reading:
-    myFile = SD.open("test.txt");
-    if (myFile) {
-      SerialUSB.println("test.txt:");
-
-      // read from the file until there's nothing else in it:
-      while (myFile.available()) {
-	SerialUSB.write(myFile.read());
-      }
-      // close the file:
-      myFile.close();
-    } else {
-      // if the file didn't open, print an error:
-      SerialUSB.println("error opening test.txt");
-    }*/
+    SerialUSB.print("LAT: ");
+    SerialUSB.print(lat);
+    SerialUSB.print(" LON: ");
+    SerialUSB.print(lon);
+    SerialUSB.println();
     
+    if (millis() > last_tx + 5000) {
+      
+      const int msg_len = sizeof(long)*3;
+      uint8_t msg[msg_len + 2];
+      msg[0] = MESSAGE_SEND;
+      msg[1] = msg_len;
 
+      ((int*)(msg+2))[0] = lat;
+      ((int*)(msg+2))[1] = lon;
+      ((int*)(msg+2))[2] = bmp_alt;
+    
+      min_send_frame(&min_ctx_s6c, 0, msg, msg[1] + 2);
+      last_tx = millis();
+    }
+      
+    int available = SerialS6C.available();
+    if (available > 0) {
+      if (available > 32) available = 32;
+      size_t buf_len = SerialS6C.readBytes(serial_buffer_S6C, available);
+      min_poll(&min_ctx_s6c, (uint8_t*)serial_buffer_S6C, (uint8_t)buf_len);
+    }
+
+  }
+}
 
 void loop() {  
 }

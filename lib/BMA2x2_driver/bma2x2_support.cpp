@@ -103,7 +103,7 @@
 
 struct bma2x2_t bma2x2;
 
-s32 bma2x2_data_readout_template(void)
+s32 bma2x2_data_readout_template()
 {
 	/*Local variables for reading accel x, y and z data*/
 	struct bma2x2_accel_data_temp sample_xyzt;
@@ -117,7 +117,6 @@ s32 bma2x2_data_readout_template(void)
 	bma2x2.delay_msec = BMA2x2_delay_msek;
 	
 	com_rslt = bma2x2_init(&bma2x2);
-
 	com_rslt = bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
 
 	/* This API used to Write the bandwidth of the sensor input
@@ -138,6 +137,24 @@ s32 bma2x2_data_readout_template(void)
 
 	//com_rslt += bma2x2_set_power_mode(BMA2x2_MODE_DEEP_SUSPEND);
 }
+
+void bma2x2_init_accel(void) {
+	bma2x2.bus_write = BMA2x2_SPI_bus_write;
+	bma2x2.bus_read = BMA2x2_SPI_bus_read;
+	bma2x2.delay_msec = BMA2x2_delay_msek;
+	
+	bma2x2_init(&bma2x2);
+	bma2x2_set_power_mode(BMA2x2_MODE_NORMAL);
+	u8 bw_value_u8 = 0x08;
+	bma2x2_set_bw(bw_value_u8);
+}
+
+bma2x2_accel_data_temp bma2x2_read_accel(void) {
+	struct bma2x2_accel_data_temp sample;
+	bma2x2_read_accel_xyzt(&sample);
+	return sample;
+}
+
 #define BMA2x2_API
 #ifdef BMA2x2_API
 
