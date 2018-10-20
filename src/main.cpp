@@ -6,7 +6,7 @@
 #include "bma2x2_support.hpp"
 #include "bmg160_support.hpp"
 #include "RadioInterface.h"
-#include "TinyGPS.h"
+#include "TinyGPS++.h"
 
 #define LED_PIN SCL
 #define BMP_CS 12
@@ -165,13 +165,7 @@ void setup()
   }
 
   // initialize GPS
-  TinyGPS gps;
-  long lat = 0;
-  long lon = 0;
-  unsigned long fix_age =0 ;
-  unsigned long time = 0;
-  unsigned long date = 0;
-  float alt_gps = 0;
+  TinyGPSPlus gps;
 
   SerialGPS.begin(9600);
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
@@ -214,7 +208,7 @@ void setup()
     if (millis() > last_log + 10) //log every 10 milliseconds
     {
       last_log = millis();
-      SerialUSB.println("Logging...");
+      //SerialUSB.println("Logging...");
 
       float bmp_pres = bmp.readPressure();
       float bmp_alt = bmp.readAltitude();
@@ -222,20 +216,12 @@ void setup()
       gyro_data = bmg160_read_gyro();
       float temp = bmp.readTemperature();
 
-      while (SerialGPS.available())
-      {
-        char c = SerialGPS.read();
-        if (gps.encode(c))
-        {
-          gps.get_position(&lat, &lon, &fix_age);
-          alt_gps = gps.f_altitude();
-          gps.get_datetime(&date, &time, &fix_age);
-        }
-      }
+      while (SerialGPS.available() > 0)
+        gps.encode(SerialGPS.read());
 
       if (logFile)
       {
-        SerialUSB.println("Found file...");
+        //SerialUSB.println("Found file...");
         logFile.print(bmp_pres);
         logFile.print(",");
 
@@ -256,13 +242,13 @@ void setup()
         logFile.print(temp);
         logFile.print(",");
 
-        logFile.print(lat);
+        logFile.print(gps.location.lat());
         logFile.print(",");
-        logFile.print(lon);
+        logFile.print(gps.location.lng());
         logFile.print(",");
-        logFile.print(alt_gps);
+        logFile.print(gps.altitude.meters());
         logFile.print(",");
-        logFile.print(time);
+        logFile.print(gps.time.value());
         logFile.println(",");
 
         logFile.flush();
@@ -277,8 +263,10 @@ void setup()
         msg[0] = MESSAGE_SEND;
         msg[1] = msg_len;
 
-        ((int32_t *)(msg + 2))[0] = lat;
-        ((int32_t *)(msg + 2))[1] = lon;
+
+
+        ((int32_t *)(msg + 2))[0] = long(gps.location.lat()*1000000);
+        ((int32_t *)(msg + 2))[1] = long(gps.location.lng()*1000000);
         ((int32_t *)(msg + 2))[2] = bmp_alt;
         
         PrintHex8(msg, msg_len+2);
@@ -287,14 +275,15 @@ void setup()
       }
 
       SerialUSB.print("LAT: ");
-      SerialUSB.print(lat);
+      SerialUSB.print(long(gps.location.lat()*1000000));
       SerialUSB.print(" LON: ");
-      SerialUSB.print(lon);
+      SerialUSB.print(long(gps.location.lng()*1000000));
       SerialUSB.print(" ALT: ");
       SerialUSB.print(bmp_alt);
       SerialUSB.print(" TIME: ");
-      SerialUSB.print(time);
+      SerialUSB.print(gps.time.value());
       SerialUSB.println();
+      
     }
   }
 }
