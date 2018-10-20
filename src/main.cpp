@@ -29,6 +29,17 @@
 #define MODE_RECEIVING 1
 #define MODE_TRANSMITTING 2
 
+void PrintHex8(uint8_t *data, uint8_t length) // prints 16-bit data in hex with leading zeroes
+{
+       char tmp[8];
+       for (int i=0; i<length; i++)
+       { 
+         sprintf(tmp, "0x%.2X",data[i]); 
+         SerialUSB.print(tmp); SerialUSB.print(" ");
+       }
+       SerialUSB.println();
+}
+
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
 Uart SerialGPS(&sercom2, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
 
@@ -44,6 +55,7 @@ void SERCOM2_Handler()
 
 void do_cutdown()
 {
+  //This fires Q3 and Q?
   digitalWrite(FET1, LOW);
   digitalWrite(FET2, LOW);
 }
@@ -51,6 +63,7 @@ void do_cutdown()
 void do_main()
 {
   digitalWrite(FET3, LOW);
+  //This fires Q2
 }
 
 void min_application_handler(uint8_t min_id, uint8_t *min_payload, uint8_t len_payload, uint8_t port)
@@ -102,12 +115,6 @@ uint32_t last_log = millis();
 
 void setup()
 {
-  // initialize ports
-  PORT->Group[0].DIR.reg = PORT_PA27;
-  PORT->Group[0].OUTSET.reg = (1UL << (27 % 32));
-  //COMMEMNT OUT B4 LAUNCH
-  PORT->Group[0].DIR.reg |= PORT_PA28;
-  PORT->Group[0].OUTSET.reg = (1UL << (28 % 32));
 
   //initialize pins
   pinMode(LED_PIN, OUTPUT);
@@ -117,6 +124,16 @@ void setup()
   pinMode(ADXL_CS, OUTPUT);
   pinMode(GYRO_CS, OUTPUT);
   pinMode(BMP2_CS, OUTPUT);
+
+  pinMode(FET1,OUTPUT);
+  pinMode(FET2,OUTPUT);
+  pinMode(FET3,OUTPUT);
+  pinMode(HEATER,OUTPUT);
+
+  digitalWrite(FET1,HIGH);
+  digitalWrite(FET2,HIGH);
+  digitalWrite(FET3,HIGH);
+  digitalWrite(HEATER,LOW);//DONT FORGET!
 
   digitalWrite(BMP2_CS, HIGH);
   digitalWrite(SD_CS, HIGH);
@@ -199,6 +216,7 @@ void setup()
       last_log = millis();
       SerialUSB.println("Logging...");
 
+      float bmp_pres = bmp.readPressure();
       float bmp_alt = bmp.readAltitude();
       accel_data = bma2x2_read_accel();
       gyro_data = bmg160_read_gyro();
@@ -218,7 +236,7 @@ void setup()
       if (logFile)
       {
         SerialUSB.println("Found file...");
-        logFile.print(bmp_alt);
+        logFile.print(bmp_pres);
         logFile.print(",");
 
         logFile.print(accel_data.x);
@@ -254,14 +272,16 @@ void setup()
       if (millis() > last_tx + 5000)
       {
         last_tx = millis();
-        const int msg_len = sizeof(long) * 3;
+        const int msg_len = sizeof(int32_t) * 3;
         uint8_t msg[msg_len + 2];
         msg[0] = MESSAGE_SEND;
         msg[1] = msg_len;
 
-        ((int *)(msg + 2))[0] = lat;
-        ((int *)(msg + 2))[1] = lon;
-        ((int *)(msg + 2))[2] = bmp_alt;
+        ((int32_t *)(msg + 2))[0] = lat;
+        ((int32_t *)(msg + 2))[1] = lon;
+        ((int32_t *)(msg + 2))[2] = bmp_alt;
+        
+        PrintHex8(msg, msg_len+2);
 
         min_send_frame(&min_ctx_s6c, 0, msg, msg[1] + 2);
       }
@@ -270,6 +290,8 @@ void setup()
       SerialUSB.print(lat);
       SerialUSB.print(" LON: ");
       SerialUSB.print(lon);
+      SerialUSB.print(" ALT: ");
+      SerialUSB.print(bmp_alt);
       SerialUSB.println();
     }
   }
