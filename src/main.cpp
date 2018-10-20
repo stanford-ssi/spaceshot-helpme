@@ -29,6 +29,12 @@
 #define MODE_RECEIVING 1
 #define MODE_TRANSMITTING 2
 
+uint32_t last_tx = millis();
+uint32_t last_log = millis();
+uint32_t start = millis();
+uint8_t cache = 0;
+bool cutdown_state = false;
+
 void PrintHex8(uint8_t *data, uint8_t length) // prints 16-bit data in hex with leading zeroes
 {
        char tmp[8];
@@ -58,6 +64,7 @@ void do_cutdown()
   //This fires Q3 and Q?
   digitalWrite(FET1, LOW);
   digitalWrite(FET2, LOW);
+  cutdown_state = true;
 }
 
 void do_main()
@@ -110,11 +117,7 @@ struct min_context min_ctx_s6c;
 
 struct bma2x2_t bma;
 
-uint32_t last_tx = millis();
-uint32_t last_log = millis();
-uint32_t start = millis();
-uint8_t cache = 0;
-bool cutdown_state = false;
+
 
 void setup()
 {
