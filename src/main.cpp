@@ -162,7 +162,7 @@ void setup()
 
   if (logFile)
   {
-    logFile.println("altitude_bmp,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,"
+    logFile.println("millis,altitude_bmp,accel_x,accel_y,accel_z,gyro_x,gyro_y,gyro_z,"
                     "temperature,latitude,longitude,altitude_gps,time");
   }
 
@@ -210,7 +210,7 @@ void setup()
     if (millis() > last_log + 10) //log every 10 milliseconds
     {
       last_log = millis();
-      //SerialUSB.println("Logging...");
+      SerialUSB.println("Logging...");
 
       float bmp_pres = bmp.readPressure();
       float bmp_alt = bmp.readAltitude();
@@ -223,7 +223,10 @@ void setup()
 
       if (logFile)
       {
-        //SerialUSB.println("Found file...");
+        SerialUSB.println("Found file...");
+        logFile.print(millis());
+        logFile.print(",");
+
         logFile.print(bmp_pres);
         logFile.print(",");
 
