@@ -166,12 +166,12 @@ void setup()
 
   // initialize GPS
   TinyGPS gps;
-  long lat;
-  long lon;
-  unsigned long fix_age;
-  unsigned long time;
-  unsigned long date;
-  float alt_gps;
+  long lat = 0;
+  long lon = 0;
+  unsigned long fix_age =0 ;
+  unsigned long time = 0;
+  unsigned long date = 0;
+  float alt_gps = 0;
 
   SerialGPS.begin(9600);
   pinPeripheral(SGPS_RX, PIO_SERCOM_ALT);
@@ -292,6 +292,8 @@ void setup()
       SerialUSB.print(lon);
       SerialUSB.print(" ALT: ");
       SerialUSB.print(bmp_alt);
+      SerialUSB.print(" TIME: ");
+      SerialUSB.print(time);
       SerialUSB.println();
     }
   }
