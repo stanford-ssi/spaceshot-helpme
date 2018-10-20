@@ -113,6 +113,7 @@ struct bma2x2_t bma;
 uint32_t last_tx = millis();
 uint32_t last_log = millis();
 uint32_t start = millis();
+uint8_t cache = 0;
 bool cutdown_state = false;
 
 void setup()
@@ -256,8 +257,14 @@ void setup()
         logFile.print(gps.time.value());
         logFile.println(",");
 
-        logFile.flush();
+        //logFile.flush();
+        cache++;
         digitalWrite(LED_PIN, HIGH);
+      }
+
+      if(cache > 5){
+        cache = 0;
+        logFile.flush();
       }
 
       if (millis() > last_tx + 5000)
