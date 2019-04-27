@@ -194,18 +194,45 @@
 // void loop() {}
 
 #include <Arduino.h>
+#include "SSIradio.h"
+
 #define LED 21
+
+#define SRAD_TX 36
+#define SRAD_RX 35
+
+Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
+
+void SERCOM1_Handler()
+{
+  SerialS6C.IrqHandler();
+}
+
+SSIradio S6C;
+
+void receiveMsg(char* msg) {
+  SerialUSB.println(msg);
+}
 
 void setup(){
   SerialUSB.begin(115200);
   pinMode(LED, OUTPUT);
+
+  S6C.set_callback(receiveMsg);
+  S6C.begin(9600, &SerialS6C);
+  digitalWrite(LED, HIGH);
+  while (!S6C);
+  delay(125);
+  digitalWrite(LED, LOW);
 }
 
 void loop() {
   digitalWrite(LED, HIGH);
   SerialUSB.println("doot");
+  S6C.tx("doot");
   delay(500);
   digitalWrite(LED, LOW);
   SerialUSB.println("doot");
+  //SerialS6C.println("doot");
   delay(500);
 }
