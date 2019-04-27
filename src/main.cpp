@@ -193,16 +193,24 @@
 //
 // void loop() {}
 
+void displayInfo();
+
 #include <Arduino.h>
+#include <wiring_private.h>
 #include "SSIradio.h"
+#include <TinyGPS++.h>
 
 #define LED 21
 
 #define SRAD_TX 36
 #define SRAD_RX 35
 
-Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
+#define SGPS_TX 4
+#define SGPS_RX 1
 
+#define logFile SerialUSB
+
+Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
 void SERCOM1_Handler()
 {
   SerialS6C.IrqHandler();
@@ -214,6 +222,42 @@ void receiveMsg(char* msg) {
   SerialUSB.println(msg);
 }
 
+TinyGPSPlus gps;
+Uart SerialGPS(&sercom0, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
+
+void SERCOM0_Handler(void) {
+  SerialGPS.IrqHandler();
+}
+
+static void printL( Print & outs, int32_t degE7 )
+{
+  // Extract and print negative sign
+  if (degE7 < 0) {
+    degE7 = -degE7;
+    outs.print( '-' );
+  }
+
+  // Whole degrees
+  int32_t deg = degE7 / 10000000L;
+  outs.print( deg );
+  outs.print( '.' );
+
+  // Get fractional degrees
+  degE7 -= deg*10000000L;
+
+  // Print leading zeroes, if needed
+  int32_t factor = 1000000L;
+  while ((degE7 < factor) && (factor > 1L)){
+    outs.print( '0' );
+    factor /= 10L;
+  }
+
+  // Print fractional degrees
+  outs.print( degE7 );
+}
+
+
+
 void setup(){
   SerialUSB.begin(115200);
   pinMode(LED, OUTPUT);
@@ -224,6 +268,15 @@ void setup(){
   while (!S6C);
   delay(125);
   digitalWrite(LED, LOW);
+
+  pinPeripheral(SGPS_RX, PIO_SERCOM);
+  pinPeripheral(SGPS_TX, PIO_SERCOM);
+  SerialGPS.begin(9600);
+
+  //delay(10000);
+  SerialUSB.print(F("TinyGPS++ library v. "));
+  SerialUSB.println(TinyGPSPlus::libraryVersion());
+  SerialUSB.println();
 }
 
 void loop() {
@@ -233,6 +286,78 @@ void loop() {
   delay(500);
   digitalWrite(LED, LOW);
   SerialUSB.println("doot");
+
+  // This sketch displays information every time a new sentence is correctly encoded.
+  if (SerialGPS.available() > 0) {
+    SerialUSB.println(SerialGPS.read());
+    // if (gps.encode(SerialGPS.read())) {
+    //   displayInfo();
+    //   delay(50);
+    // }
+  }
+
+  SerialGPS.println("doot");
+
+  // if (millis() > 35000 && gps.charsProcessed() < 10)
+  // {
+  //   SerialUSB.println(F("No GPS detected: check wiring."));
+  //   digitalWrite(LED, HIGH);
+  //   while(true);
+  // }
+
+
   //SerialS6C.println("doot");
   delay(500);
+}
+
+
+void displayInfo()
+{
+  SerialUSB.print(F("Location: "));
+  if (gps.location.isValid())
+  {
+    SerialUSB.print(gps.location.lat(), 6);
+    SerialUSB.print(F(","));
+    SerialUSB.print(gps.location.lng(), 6);
+  }
+  else
+  {
+    SerialUSB.print(F("INVALID"));
+  }
+
+  SerialUSB.print(F("  Date/Time: "));
+  if (gps.date.isValid())
+  {
+    SerialUSB.print(gps.date.month());
+    SerialUSB.print(F("/"));
+    SerialUSB.print(gps.date.day());
+    SerialUSB.print(F("/"));
+    SerialUSB.print(gps.date.year());
+  }
+  else
+  {
+    SerialUSB.print(F("INVALID"));
+  }
+
+  SerialUSB.print(F(" "));
+  if (gps.time.isValid())
+  {
+    if (gps.time.hour() < 10) SerialUSB.print(F("0"));
+    SerialUSB.print(gps.time.hour());
+    SerialUSB.print(F(":"));
+    if (gps.time.minute() < 10) SerialUSB.print(F("0"));
+    SerialUSB.print(gps.time.minute());
+    SerialUSB.print(F(":"));
+    if (gps.time.second() < 10) SerialUSB.print(F("0"));
+    SerialUSB.print(gps.time.second());
+    SerialUSB.print(F("."));
+    if (gps.time.centisecond() < 10) SerialUSB.print(F("0"));
+    SerialUSB.print(gps.time.centisecond());
+  }
+  else
+  {
+    SerialUSB.print(F("INVALID"));
+  }
+
+  SerialUSB.println();
 }
