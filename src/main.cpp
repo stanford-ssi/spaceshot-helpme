@@ -280,23 +280,27 @@ void setup(){
 }
 
 void loop() {
-  digitalWrite(LED, HIGH);
-  SerialUSB.println("doot");
-  S6C.tx("doot");
-  delay(500);
-  digitalWrite(LED, LOW);
-  SerialUSB.println("doot");
+
+  //SerialUSB.println("doot");
+  //S6C.tx("doot");
+  //delay(500);
+  //digitalWrite(LED, LOW);
+  //SerialUSB.println("doot");
 
   // This sketch displays information every time a new sentence is correctly encoded.
+  digitalWrite(LED, HIGH);
+  delay(50);
   if (SerialGPS.available() > 0) {
-    SerialUSB.println(SerialGPS.read());
-    // if (gps.encode(SerialGPS.read())) {
-    //   displayInfo();
-    //   delay(50);
-    // }
+    //SerialUSB.println(SerialGPS.read());
+    if (gps.encode(SerialGPS.read())) {
+      displayInfo();
+      delay(50);
+    }
   }
+  digitalWrite(LED, LOW);
+  delay(50);
 
-  SerialGPS.println("doot");
+  //SerialGPS.println("doot");
 
   // if (millis() > 35000 && gps.charsProcessed() < 10)
   // {
@@ -307,7 +311,7 @@ void loop() {
 
 
   //SerialS6C.println("doot");
-  delay(500);
+  //delay(500);
 }
 
 
