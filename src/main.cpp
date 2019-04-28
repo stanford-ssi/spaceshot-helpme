@@ -205,6 +205,7 @@
 void displayInfo();
 uint8_t batteryCheck();
 void sendCoords();
+void cmdODrive(char* buf);
 
 #define LED 21
 
@@ -241,6 +242,12 @@ const char kReadCommand[] = "r axis0.sensorless_estimator.vel_estimate\n";
 const char kBatteryCommand[] = "r vbus_voltage\n";
 const char kBatteryError[] = "BATTERY LOW\n";
 
+long latitude;
+long longitude;
+long altitude;
+uint8_t voltage;
+long rate;
+
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler()
 {
@@ -248,20 +255,6 @@ void SERCOM1_Handler()
 }
 
 SSIradio S6C;
-
-void receiveMsg(char* msg) {
-  //SerialUSB.println("Hello from receive message");
-  //SerialUSB.println(micros());
-  //SerialUSB.println(msg);
-}
-
-TinyGPSPlus gps;
-Uart SerialGPS(&sercom0, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
-//#define Serial1 SerialGPS // oh god no
-
-void SERCOM0_Handler(void) {
-  SerialGPS.IrqHandler();
-}
 
 Uart SerialODrive(&sercom5, ODRIVE_RX, ODRIVE_TX, SERCOM_RX_PAD_3, UART_TX_PAD_2);
 void SERCOM5_Handler()
@@ -271,6 +264,56 @@ void SERCOM5_Handler()
 // #define SerialODrive Serial
 
 
+void receiveMsg(char* msg) {
+  //SerialUSB.println("Hello from receive message");
+  //SerialUSB.println(micros());
+  //SerialUSB.println(msg);
+
+  size_t i = 1; // message start index
+
+  // spin control
+  if(msg[i] == 's' && msg[i+1] == 'p' && msg[i+2] == 'i' && msg[i+3] == 'n'){
+    char * pEnd;
+    rate = strtol(msg+i+5, &pEnd, 10);
+    SerialUSB.println(rate);
+
+    sprintf(buf, kSpeedCommand, rate);
+    cmdODrive(buf);
+
+    if(rate > 0){
+      strncpy(buf, kStartCommand, strlen(kStartCommand) + 1);
+    }else{
+      strncpy(buf, kStopCommand, strlen(kStopCommand) + 1);
+    }
+
+    cmdODrive(buf);
+  }
+
+  // cutdown
+  if(msg[i] == 'c' && msg[i+1] == 'u' && msg[i+2] == 't' && msg[i+3] == 'd' && msg[i+4] == 'o' && msg[i+5] == 'w' && msg[i+6] == 'n'){
+    digitalWrite(CUTDOWN1, HIGH);
+    digitalWrite(CUTDOWN2, HIGH);
+    SerialUSB.println("weeeee!");
+    digitalWrite(LED, HIGH);
+    delay(10000);
+  }
+
+
+}
+
+void cmdODrive(char* buf){
+  size_t buf_len = strlen(buf);
+  SerialODrive.write(buf, buf_len);
+  SerialUSB.println(buf);
+}
+
+TinyGPSPlus gps;
+Uart SerialGPS(&sercom0, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
+//#define Serial1 SerialGPS // oh god no
+
+void SERCOM0_Handler(void) {
+  SerialGPS.IrqHandler();
+}
 
 void setup(){
   SerialUSB.begin(115200);
@@ -300,10 +343,7 @@ void setup(){
   SerialODrive.begin(115200);
 }
 
-long latitude;
-long longitude;
-long altitude;
-uint8_t voltage;
+
 
 long lasttime = 0;
 
