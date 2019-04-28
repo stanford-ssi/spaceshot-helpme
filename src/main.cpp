@@ -194,11 +194,14 @@
 // void loop() {}
 
 void displayInfo();
+void batteryCheck();
 
 #include <Arduino.h>
 #include <wiring_private.h>
 #include "SSIradio.h"
 #include <TinyGPS++.h>
+#include "ODriveArduino.h"
+#include <string.h>
 
 #define LED 21
 
@@ -208,10 +211,32 @@ void displayInfo();
 #define SGPS_TX 4
 #define SGPS_RX 1
 
+#define ODRIVE_TX 30
+#define ODRIVE_RX 31
+
 #define CUTDOWN1 38
 #define CUTDOWN2 2
 
 #define logFile SerialUSB
+
+char buf[64];
+bool battery_warned = false;
+unsigned long battery_time;
+const float kMinVoltage = 13.0;
+const int kNumWarnings = 10;
+const unsigned int kODriveTimeout = 1000;
+const char kStartQuery[] = "spinmebaby";
+const char kStopQuery[] = "stop";
+const char kSpeedQuery[] = "speed";
+const char kReadQuery[] = "read";
+const char kBatteryQuery[] = "battery";
+const char kStartCommand[] = "w axis0.controller.vel_ramp_enable 1\n"
+                             "w axis0.requested_state 5\n";
+const char kStopCommand[] = "w axis0.requested_state 1\n";
+const char kSpeedCommand[] = "w axis0.controller.vel_ramp_target %d\n";
+const char kReadCommand[] = "r axis0.sensorless_estimator.vel_estimate\n";
+const char kBatteryCommand[] = "r vbus_voltage\n";
+const char kBatteryError[] = "BATTERY LOW\n";
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
 void SERCOM1_Handler()
@@ -227,37 +252,18 @@ void receiveMsg(char* msg) {
 
 TinyGPSPlus gps;
 Uart SerialGPS(&sercom0, SGPS_RX, SGPS_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
+//#define Serial1 SerialGPS // oh god no
 
 void SERCOM0_Handler(void) {
   SerialGPS.IrqHandler();
 }
 
-static void printL( Print & outs, int32_t degE7 )
-{
-  // Extract and print negative sign
-  if (degE7 < 0) {
-    degE7 = -degE7;
-    outs.print( '-' );
-  }
-
-  // Whole degrees
-  int32_t deg = degE7 / 10000000L;
-  outs.print( deg );
-  outs.print( '.' );
-
-  // Get fractional degrees
-  degE7 -= deg*10000000L;
-
-  // Print leading zeroes, if needed
-  int32_t factor = 1000000L;
-  while ((degE7 < factor) && (factor > 1L)){
-    outs.print( '0' );
-    factor /= 10L;
-  }
-
-  // Print fractional degrees
-  outs.print( degE7 );
-}
+// Uart SerialODrive(&sercom5, ODRIVE_RX, ODRIVE_TX, SERCOM_RX_PAD_3, UART_TX_PAD_2);
+// void SERCOM5_Handler()
+// {
+//   SerialODrive.IrqHandler();
+// }
+#define SerialODrive Serial
 
 
 
@@ -285,10 +291,15 @@ void setup(){
   SerialUSB.print(F("TinyGPS++ library v. "));
   SerialUSB.println(TinyGPSPlus::libraryVersion());
   SerialUSB.println();
+
+  SerialODrive.begin(115200);
 }
 
 void loop() {
 
+  batteryCheck();
+
+  //SerialODrive.println("doot");
   //SerialUSB.println("doot");
   //S6C.tx("doot");
   //delay(500);
@@ -372,4 +383,23 @@ void displayInfo()
   }
 
   SerialUSB.println();
+}
+
+void batteryCheck(){
+  SerialUSB.println("Battery check!");
+  SerialODrive.write(kBatteryCommand, strlen(kBatteryCommand));
+
+  unsigned long start = millis();
+  while(SerialODrive.available() > 0 && millis() - start < kODriveTimeout) {
+    Serial.println("Waiting!");
+    delay(10);
+  }
+
+  SerialODrive.readBytes(buf, 64U);
+  SerialUSB.println(buf);
+
+  // SerialODrive.readBytes(buf, 64U);
+  // float voltage;
+  // sscanf(buf, "%f\n", &voltage);
+  // SerialUSB.println(voltage);
 }
