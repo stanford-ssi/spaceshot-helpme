@@ -250,6 +250,7 @@ void SERCOM1_Handler()
 SSIradio S6C;
 
 void receiveMsg(char* msg) {
+  SerialUSB.println("Hello from receive message");
   SerialUSB.println(msg);
 }
 
@@ -303,7 +304,10 @@ long longitude;
 long altitude;
 uint8_t voltage;
 
+long lasttime = 0;
+
 void loop() {
+
 
   latitude = (random(360)-180)*1000 + 39425000;
   longitude = (random(360)-180)*1000 -168007860;
@@ -314,12 +318,16 @@ void loop() {
   //SerialUSB.println("doot");
   //S6C.tx("doot");
 
-  digitalWrite(LED, LOW);
   S6C.rx();
-  delay(1000);
-  digitalWrite(LED, HIGH);
+
+  digitalWrite(LED, LOW);
+  if(millis() -lasttime > 1000){
+    digitalWrite(LED, HIGH);
+  }
+
+  if(millis() - lasttime > 2000) lasttime = millis();
   //sendCoords();
-  delay(1000);
+
   //digitalWrite(LED, LOW);
   //SerialUSB.println("doot");
 
