@@ -203,6 +203,7 @@
 #include <string.h>
 
 void displayInfo();
+void updateLatLongAlt();
 uint8_t batteryCheck();
 void sendCoords();
 void cmdODrive(char* buf);
@@ -229,11 +230,11 @@ unsigned long battery_time;
 const float kMinVoltage = 13.0;
 const int kNumWarnings = 10;
 const unsigned int kODriveTimeout = 1000;
-const char kStartQuery[] = "spinmebaby";
-const char kStopQuery[] = "stop";
-const char kSpeedQuery[] = "speed";
-const char kReadQuery[] = "read";
-const char kBatteryQuery[] = "battery";
+// const char kStartQuery[] = "spinmebaby";
+// const char kStopQuery[] = "stop";
+// const char kSpeedQuery[] = "speed";
+// const char kReadQuery[] = "read";
+// const char kBatteryQuery[] = "battery";
 const char kStartCommand[] = "w axis0.controller.vel_ramp_enable 1\n"
                              "w axis0.requested_state 5\n";
 const char kStopCommand[] = "w axis0.requested_state 1\n";
@@ -242,11 +243,11 @@ const char kReadCommand[] = "r axis0.sensorless_estimator.vel_estimate\n";
 const char kBatteryCommand[] = "r vbus_voltage\n";
 const char kBatteryError[] = "BATTERY LOW\n";
 
-long latitude;
-long longitude;
-long altitude;
-uint8_t voltage;
-long rate;
+long latitude = 0;
+long longitude = 0;
+long altitude = -1;
+uint8_t voltage = 0;
+long rate = 0;
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler()
@@ -297,7 +298,6 @@ void receiveMsg(char* msg) {
     digitalWrite(LED, HIGH);
     delay(10000);
   }
-
 
 }
 
@@ -350,9 +350,9 @@ long lasttime = 0;
 void loop() {
 
 
-  latitude = (random(360)-180)*1000 + 39425000;
-  longitude = (random(360)-180)*1000 -168007860;
-  altitude = random(412500); // 412499;
+  // latitude = (random(360)-180)*1000 + 39425000;
+  // longitude = (random(360)-180)*1000 -168007860;
+  // altitude = random(412500); // 412499;
   voltage = 248 + random(8);
 
   //SerialODrive.println("doot");
@@ -361,9 +361,18 @@ void loop() {
 
   S6C.rx();
 
+  if (SerialGPS.available() > 0) {
+    //SerialUSB.println(SerialGPS.read());
+    if (gps.encode(SerialGPS.read())) {
+      updateLatLongAlt();
+    }
+  }
+
+
   digitalWrite(LED, LOW);
   if(millis() -lasttime > 1000){
     digitalWrite(LED, HIGH);
+    sendCoords();
   }
 
   if(millis() - lasttime > 2000) lasttime = millis();
@@ -397,6 +406,20 @@ void loop() {
 
   //SerialS6C.println("doot");
   //delay(500);
+}
+
+
+void updateLatLongAlt()
+{
+  if (gps.location.isValid())
+  {
+    latitude = gps.location.lat()*1000000;
+    longitude = gps.location.lng()*1000000;
+  }
+
+  if(gps.altitude.isValid()){
+    altitude = gps.altitude.feet();
+  }
 }
 
 
