@@ -195,6 +195,7 @@
 
 void displayInfo();
 void batteryCheck();
+void sendCoords();
 
 #include <Arduino.h>
 #include <wiring_private.h>
@@ -301,7 +302,8 @@ void loop() {
 
   //SerialODrive.println("doot");
   //SerialUSB.println("doot");
-  S6C.tx("doot");
+  //S6C.tx("doot");
+  sendCoords();
   delay(1000);
   //digitalWrite(LED, LOW);
   //SerialUSB.println("doot");
@@ -402,4 +404,32 @@ void batteryCheck(){
   // float voltage;
   // sscanf(buf, "%f\n", &voltage);
   // SerialUSB.println(voltage);
+}
+
+void sendCoords() {
+  char message_id = 0b10; // 0b11
+  const int msg_len = sizeof(int32_t) * 3 + sizeof(uint8_t);
+  char msg[msg_len];
+  // msg[0] = MESSAGE_SEND;
+  // msg[1] = msg_len;
+  msg[0] = message_id;
+
+  long latitude = (random(360)-180)*1000000; //39425000;
+  long longitude = (random(360)-180)*1000000; // -168007860;
+  long altitude = random(412500); // 412499;
+
+  *(long*)(msg+1) = latitude;
+  *(long*)(msg+5) = longitude;
+  *(long*)(msg+9) = altitude;
+
+  S6C.tx(msg, msg_len);
+
+
+  //snprintf(out, msg_len, "%c%f%d", res, sq.getState());
+  /*
+  ((int32_t *)(msg + 3))[0] = (random(360)-180)*1000000; //long(gps.location.lat()*1000000);
+  ((int32_t *)(msg + 3))[1] = (random(360)-180)*1000000; //long(gps.location.lng()*1000000);
+  ((int32_t *)(msg + 3))[2] = random(412500); //long(gps.altitude.feet());
+  */
+
 }
