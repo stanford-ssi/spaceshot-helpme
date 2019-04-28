@@ -297,12 +297,12 @@ void setup(){
 
 void loop() {
 
-  batteryCheck();
+  //batteryCheck();
 
   //SerialODrive.println("doot");
   //SerialUSB.println("doot");
-  //S6C.tx("doot");
-  //delay(500);
+  S6C.tx("doot");
+  delay(1000);
   //digitalWrite(LED, LOW);
   //SerialUSB.println("doot");
 
