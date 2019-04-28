@@ -33,7 +33,13 @@ uint8_t SSIradio::rx(){
 
   if (serial_port->available() > 0) {
     buf_len = serial_port->readBytes(buf, buf_size);
-    SerialUSB.println(buf_len);
+
+    for(int i = 0; i < buf_len; i++){
+      //SerialUSB.print(buf[i]);
+      //SerialUSB.print("  ");
+    }
+
+    //SerialUSB.println(buf_len);
   } else {
     buf_len = 0;
   }
@@ -97,6 +103,8 @@ SSIradio::operator bool () const {
 void min_application_handler(uint8_t min_id, uint8_t *min_payload,
     uint8_t len_payload, uint8_t port)
 {
+
+  //SerialUSB.println(micros());
 
   if (len_payload == 0) {
 			return;

@@ -250,8 +250,9 @@ void SERCOM1_Handler()
 SSIradio S6C;
 
 void receiveMsg(char* msg) {
-  SerialUSB.println("Hello from receive message");
-  SerialUSB.println(msg);
+  //SerialUSB.println("Hello from receive message");
+  //SerialUSB.println(micros());
+  //SerialUSB.println(msg);
 }
 
 TinyGPSPlus gps;
