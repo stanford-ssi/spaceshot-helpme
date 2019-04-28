@@ -238,7 +238,7 @@ const char kReadCommand[] = "r axis0.sensorless_estimator.vel_estimate\n";
 const char kBatteryCommand[] = "r vbus_voltage\n";
 const char kBatteryError[] = "BATTERY LOW\n";
 
-Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
+Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler()
 {
   SerialS6C.IrqHandler();
@@ -309,13 +309,13 @@ void loop() {
   // This sketch displays information every time a new sentence is correctly encoded.
   digitalWrite(LED, HIGH);
   //delay(50);
-  if (SerialGPS.available() > 0) {
-    //SerialUSB.println(SerialGPS.read());
-    if (gps.encode(SerialGPS.read())) {
-      displayInfo();
-      delay(50);
-    }
-  }
+  // if (SerialGPS.available() > 0) {
+  //   //SerialUSB.println(SerialGPS.read());
+  //   if (gps.encode(SerialGPS.read())) {
+  //     displayInfo();
+  //     delay(50);
+  //   }
+  // }
   digitalWrite(LED, LOW);
   //delay(50);
 
