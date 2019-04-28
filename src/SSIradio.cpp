@@ -94,6 +94,8 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload,
     uint8_t len_payload, uint8_t port)
 {
 
+  SerialUSB.println("gkshbgljrwhg");
+
   if (len_payload == 0) {
 			return;
 	}
@@ -101,7 +103,7 @@ void min_application_handler(uint8_t min_id, uint8_t *min_payload,
   // increment min_id to be sequential
   radios[port]->set_min_id(min_id + 1);
 
-  SerialUSB.println("YOOOO");
+  //SerialUSB.println("YOOOO");
 
   // run callback function if set
   if(radios[port]->callback){

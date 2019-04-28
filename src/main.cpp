@@ -193,9 +193,7 @@
 //
 // void loop() {}
 
-void displayInfo();
-void batteryCheck();
-void sendCoords();
+
 
 #include <Arduino.h>
 #include <wiring_private.h>
@@ -203,6 +201,10 @@ void sendCoords();
 #include <TinyGPS++.h>
 #include "ODriveArduino.h"
 #include <string.h>
+
+void displayInfo();
+uint8_t batteryCheck();
+void sendCoords();
 
 #define LED 21
 
@@ -259,12 +261,12 @@ void SERCOM0_Handler(void) {
   SerialGPS.IrqHandler();
 }
 
-// Uart SerialODrive(&sercom5, ODRIVE_RX, ODRIVE_TX, SERCOM_RX_PAD_3, UART_TX_PAD_2);
-// void SERCOM5_Handler()
-// {
-//   SerialODrive.IrqHandler();
-// }
-#define SerialODrive Serial
+Uart SerialODrive(&sercom5, ODRIVE_RX, ODRIVE_TX, SERCOM_RX_PAD_3, UART_TX_PAD_2);
+void SERCOM5_Handler()
+{
+  SerialODrive.IrqHandler();
+}
+// #define SerialODrive Serial
 
 
 
@@ -296,20 +298,33 @@ void setup(){
   SerialODrive.begin(115200);
 }
 
+long latitude;
+long longitude;
+long altitude;
+uint8_t voltage;
+
 void loop() {
 
-  //batteryCheck();
+  latitude = (random(360)-180)*1000 + 39425000;
+  longitude = (random(360)-180)*1000 -168007860;
+  altitude = random(412500); // 412499;
+  voltage = 248 + random(8);
 
   //SerialODrive.println("doot");
   //SerialUSB.println("doot");
   //S6C.tx("doot");
-  sendCoords();
+
+  digitalWrite(LED, LOW);
+  S6C.rx();
+  delay(1000);
+  digitalWrite(LED, HIGH);
+  //sendCoords();
   delay(1000);
   //digitalWrite(LED, LOW);
   //SerialUSB.println("doot");
 
   // This sketch displays information every time a new sentence is correctly encoded.
-  digitalWrite(LED, HIGH);
+
   //delay(50);
   // if (SerialGPS.available() > 0) {
   //   //SerialUSB.println(SerialGPS.read());
@@ -318,7 +333,7 @@ void loop() {
   //     delay(50);
   //   }
   // }
-  digitalWrite(LED, LOW);
+
   //delay(50);
 
   //SerialGPS.println("doot");
@@ -387,18 +402,27 @@ void displayInfo()
   SerialUSB.println();
 }
 
-void batteryCheck(){
-  SerialUSB.println("Battery check!");
+uint8_t batteryCheck(){
+  //SerialUSB.println("Battery check!");
   SerialODrive.write(kBatteryCommand, strlen(kBatteryCommand));
 
-  unsigned long start = millis();
-  while(SerialODrive.available() > 0 && millis() - start < kODriveTimeout) {
-    Serial.println("Waiting!");
+  int i = 0;
+  while(!SerialODrive.available() && i < 100) {
+    //Serial.println("Waiting!");
     delay(10);
+    i++;
   }
 
   SerialODrive.readBytes(buf, 64U);
   SerialUSB.println(buf);
+  float voltage;
+  sscanf(buf, "%f\n", &voltage);
+
+  SerialUSB.println(voltage*4.0);
+
+  //SerialUSB.println((uint8_t) (voltage*4.0));
+
+  return (uint8_t) (voltage*4.0);
 
   // SerialODrive.readBytes(buf, 64U);
   // float voltage;
@@ -408,19 +432,17 @@ void batteryCheck(){
 
 void sendCoords() {
   char message_id = 0b10; // 0b11
-  const int msg_len = sizeof(int32_t) * 3 + sizeof(uint8_t);
+  const int msg_len = sizeof(int32_t) * 3 + sizeof(uint8_t) * 2;
   char msg[msg_len];
   // msg[0] = MESSAGE_SEND;
   // msg[1] = msg_len;
   msg[0] = message_id;
 
-  long latitude = (random(360)-180)*1000000; //39425000;
-  long longitude = (random(360)-180)*1000000; // -168007860;
-  long altitude = random(412500); // 412499;
 
   *(long*)(msg+1) = latitude;
   *(long*)(msg+5) = longitude;
   *(long*)(msg+9) = altitude;
+  *(uint8_t*)(msg+13) = voltage;
 
   S6C.tx(msg, msg_len);
 
