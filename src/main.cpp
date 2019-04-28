@@ -208,6 +208,9 @@ void displayInfo();
 #define SGPS_TX 4
 #define SGPS_RX 1
 
+#define CUTDOWN1 38
+#define CUTDOWN2 2
+
 #define logFile SerialUSB
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_2, UART_TX_PAD_0);
@@ -262,6 +265,11 @@ void setup(){
   SerialUSB.begin(115200);
   pinMode(LED, OUTPUT);
 
+  pinMode(CUTDOWN1, OUTPUT);
+  pinMode(CUTDOWN2, OUTPUT);
+  digitalWrite(CUTDOWN1, HIGH); // OFF
+  digitalWrite(CUTDOWN2, HIGH); // OFF
+
   S6C.set_callback(receiveMsg);
   S6C.begin(9600, &SerialS6C);
   digitalWrite(LED, HIGH);
@@ -289,7 +297,7 @@ void loop() {
 
   // This sketch displays information every time a new sentence is correctly encoded.
   digitalWrite(LED, HIGH);
-  delay(50);
+  //delay(50);
   if (SerialGPS.available() > 0) {
     //SerialUSB.println(SerialGPS.read());
     if (gps.encode(SerialGPS.read())) {
@@ -298,7 +306,7 @@ void loop() {
     }
   }
   digitalWrite(LED, LOW);
-  delay(50);
+  //delay(50);
 
   //SerialGPS.println("doot");
 
