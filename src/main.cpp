@@ -225,6 +225,7 @@ void cmdODrive(char* buf);
 #define logFile SerialUSB
 
 char buf[64];
+char rateBuf[20];
 bool battery_warned = false;
 unsigned long battery_time;
 const float kMinVoltage = 13.0;
@@ -248,6 +249,7 @@ long longitude = 0;
 long altitude = -1;
 uint8_t voltage = 0;
 long rate = 0;
+
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler()
@@ -275,18 +277,24 @@ void receiveMsg(char* msg) {
   // spin control
   if(msg[i] == 's' && msg[i+1] == 'p' && msg[i+2] == 'i' && msg[i+3] == 'n'){
     char * pEnd;
+    long oldRate = rate;
     rate = strtol(msg+i+5, &pEnd, 10);
     SerialUSB.println(rate);
 
     sprintf(buf, kSpeedCommand, rate);
     cmdODrive(buf);
 
-    if(rate > 0){
+    if(oldRate == 0 && rate > 0){
       strncpy(buf, kStartCommand, strlen(kStartCommand) + 1);
-    }else{
+    }else if(rate == 0){
       strncpy(buf, kStopCommand, strlen(kStopCommand) + 1);
     }
 
+    cmdODrive(buf);
+
+
+
+    strncpy(buf, kReadCommand, strlen(kReadCommand) + 1);
     cmdODrive(buf);
   }
 
@@ -366,6 +374,12 @@ void loop() {
     if (gps.encode(SerialGPS.read())) {
       updateLatLongAlt();
     }
+  }
+
+  if(SerialODrive.available()){
+
+    size_t buf_len = SerialODrive.readBytes(rateBuf, 10);
+    S6C.tx(rateBuf, buf_len);
   }
 
 
