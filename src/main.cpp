@@ -370,10 +370,10 @@ void loop() {
 
 
   digitalWrite(LED, LOW);
-  if(millis() -lasttime > 1000){
-    digitalWrite(LED, HIGH);
-    sendCoords();
-  }
+  // if(millis() - lasttime > 1000){
+  //   digitalWrite(LED, HIGH);
+  //   sendCoords();
+  // }
 
   if(millis() - lasttime > 2000) lasttime = millis();
   //sendCoords();
