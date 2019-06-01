@@ -39,6 +39,7 @@ const char kSpinQuery[] = "spin";
 const char kCutdownQuery[] = "cutdown";
 const char kHeatQuery[] = "heat";
 const char kCoolQuery[] = "cool";
+const char kResetQuery[] = "reset";
 // const char kStopQuery[] = "stop";
 // const char kSpeedQuery[] = "speed";
 // const char kReadQuery[] = "read";
@@ -57,6 +58,9 @@ long altitude = -1;
 uint8_t voltage = 0;
 long rate = 0;
 
+bool heating = false;
+const int HEAT_PWM_MUL = 1;
+int heat_pwm = 0;
 
 Uart SerialS6C(&sercom1, SRAD_RX, SRAD_TX, SERCOM_RX_PAD_0, UART_TX_PAD_2);
 void SERCOM1_Handler()
@@ -123,11 +127,14 @@ void receiveMsg(char* msg) {
     digitalWrite(LED, HIGH);
     delay(10000);
   } else if (!strncmp(msg+1, kHeatQuery, strlen(kHeatQuery))) {
-    toggleHeater(true);
+    heating = true;
     SerialUSB.println("heating");
   } else if (!strncmp(msg+1, kCoolQuery, strlen(kCoolQuery))) {
-    toggleHeater(false);
+    heating = false;
     SerialUSB.println("cooling");
+  } else if (!strncmp(msg+1, kResetQuery, strlen(kResetQuery))) {
+    cmdODrive("sb");
+    SerialUSB.println("resetting");
   }
 
 }
@@ -148,7 +155,8 @@ void SERCOM0_Handler(void) {
 
 void setup(){
   initHeater();
-    
+  toggleHeater(false);
+  
   SerialUSB.begin(115200);
   pinMode(LED, OUTPUT);
 
@@ -160,9 +168,12 @@ void setup(){
   S6C.set_callback(receiveMsg);
   S6C.begin(9600, &SerialS6C);
   digitalWrite(LED, HIGH);
-  while (!S6C);
-  delay(125);
-  digitalWrite(LED, LOW);
+  while (!S6C) {
+      delay(100);
+      digitalWrite(LED, HIGH);
+      delay(100);
+      digitalWrite(LED, LOW);
+  };
 
   pinPeripheral(SGPS_RX, PIO_SERCOM);
   pinPeripheral(SGPS_TX, PIO_SERCOM);
@@ -183,6 +194,17 @@ long lasttime = 0;
 void loop() {
 
 
+  if (!heating) {
+    toggleHeater(false);
+  } else {
+    if (heat_pwm % HEAT_PWM_MUL == 0) {
+      toggleHeater(true);
+    } else {
+      toggleHeater(false);
+    }
+  }
+  ++heat_pwm;
+  
   // latitude = (random(360)-180)*1000 + 39425000;
   // longitude = (random(360)-180)*1000 -168007860;
   // altitude = random(412500); // 412499;
@@ -206,14 +228,18 @@ void loop() {
     S6C.tx(rateBuf, buf_len);
   }
 
-  digitalWrite(LED, LOW);
   if(millis() - lasttime > 1000){
     digitalWrite(LED, HIGH);
+    //digitalWrite(SRAD_TX, HIGH);
+    //digitalWrite(SRAD_RX, HIGH);
+  }
+  if (millis() - lasttime > 2000) {
+    lasttime = millis();
+    digitalWrite(SRAD_TX, LOW);
+    //digitalWrite(SRAD_RX, LOW);
+    digitalWrite(LED, LOW);
     sendCoords();
   }
-
-  if(millis() - lasttime > 2000) lasttime = millis();
-  //sendCoords();
 
   //digitalWrite(LED, LOW);
   //SerialUSB.println("doot");
@@ -340,6 +366,7 @@ uint8_t batteryCheck(){
 }
 
 void sendCoords() {
+/*
   char message_id = 0b10; // 0b11
   const int msg_len = sizeof(int32_t) * 3 + sizeof(uint8_t) * 2;
   char msg[msg_len];
@@ -354,7 +381,9 @@ void sendCoords() {
   *(uint8_t*)(msg+13) = voltage;
 
   S6C.tx(msg, msg_len);
+  */
 
+  S6C.tx("banana");
 
   //snprintf(out, msg_len, "%c%f%d", res, sq.getState());
   /*
