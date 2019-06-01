@@ -23,7 +23,7 @@ void cmdODrive(char* buf);
 #define ODRIVE_RX 31
 
 #define CUTDOWN1 38
-#define CUTDOWN2 2
+#define RECOVERY 2
 
 #define logFile SerialUSB
 
@@ -92,6 +92,7 @@ void toggleHeater(bool state) {
 }
 
 
+bool CUTTING_DOWN = false;
 void receiveMsg(char* msg) {
   //SerialUSB.println("Hello from receive message");
   //SerialUSB.println(micros());
@@ -120,11 +121,13 @@ void receiveMsg(char* msg) {
     strncpy(buf, kReadCommand, strlen(kReadCommand) + 1);
     cmdODrive(buf);
   } else if (!strncmp(msg+1, kCutdownQuery, strlen(kCutdownQuery))) {
-    digitalWrite(CUTDOWN1, HIGH);
-    digitalWrite(CUTDOWN2, HIGH);
-    SerialUSB.println("weeeee!");
+    CUTTING_DOWN = true;
+    digitalWrite(CUTDOWN1, LOW);
+    SerialUSB.println("cuttingdown!");
     digitalWrite(LED, HIGH);
-    delay(10000);
+    S6C.tx("Goodbye, sky...");
+    delay(5000);
+    S6C.tx("Goodbye, sky...");
   } else if (!strncmp(msg+1, kHeatQuery, strlen(kHeatQuery))) {
     heating = true;
     SerialUSB.println("heating");
@@ -134,6 +137,10 @@ void receiveMsg(char* msg) {
   } else if (!strncmp(msg+1, kResetQuery, strlen(kResetQuery))) {
     cmdODrive("sb");
     SerialUSB.println("resetting");
+  } else if (msg[1] == 'i') {
+    S6C.tx(msg + 2);
+    delay(1000);
+    S6C.tx(msg + 2);
   }
 
 }
@@ -160,9 +167,9 @@ void setup(){
   pinMode(LED, OUTPUT);
 
   pinMode(CUTDOWN1, OUTPUT);
-  pinMode(CUTDOWN2, OUTPUT);
+  pinMode(RECOVERY, OUTPUT);
   digitalWrite(CUTDOWN1, HIGH); // OFF
-  digitalWrite(CUTDOWN2, HIGH); // OFF
+  digitalWrite(RECOVERY, HIGH); // OFF
 
   S6C.set_callback(receiveMsg);
   S6C.begin(9600, &SerialS6C);
@@ -193,6 +200,7 @@ int version = 0;
 
 void loop() {
 
+  if (CUTTING_DOWN && altitude < 5000) digitalWrite(RECOVERY, LOW);
 
   if (!heating) {
     toggleHeater(false);
@@ -231,7 +239,7 @@ void loop() {
   if(millis() - lasttime > 1000){
     digitalWrite(LED, HIGH);
   }
-  if (millis() - lasttime > 2000) {
+  if (millis() - lasttime > 5000) {
     lasttime = millis();
     version++;
     if (version >= 4) version = 0; // TODO: why does every other packet get dropped? even if we set the delay to like 10s...
