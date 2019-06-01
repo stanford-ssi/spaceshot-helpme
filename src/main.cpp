@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <wiring_private.h>
 #include "SSIradio.h"
@@ -9,7 +8,7 @@
 void displayInfo();
 void updateLatLongAlt();
 uint8_t batteryCheck();
-void sendCoords();
+void sendCoords(int version);
 void cmdODrive(char* buf);
 
 #define LED 21
@@ -190,6 +189,7 @@ void setup(){
 
 
 long lasttime = 0;
+int version = 0;
 
 void loop() {
 
@@ -230,15 +230,14 @@ void loop() {
 
   if(millis() - lasttime > 1000){
     digitalWrite(LED, HIGH);
-    //digitalWrite(SRAD_TX, HIGH);
-    //digitalWrite(SRAD_RX, HIGH);
   }
   if (millis() - lasttime > 2000) {
     lasttime = millis();
-    digitalWrite(SRAD_TX, LOW);
-    //digitalWrite(SRAD_RX, LOW);
+    version++;
+    if (version >= 4) version = 0; // TODO: why does every other packet get dropped? even if we set the delay to like 10s...
+
     digitalWrite(LED, LOW);
-    sendCoords();
+    sendCoords(version);
   }
 
   //digitalWrite(LED, LOW);
@@ -365,31 +364,18 @@ uint8_t batteryCheck(){
   // SerialUSB.println(voltage);
 }
 
-void sendCoords() {
-/*
-  char message_id = 0b10; // 0b11
-  const int msg_len = sizeof(int32_t) * 3 + sizeof(uint8_t) * 2;
-  char msg[msg_len];
-  // msg[0] = MESSAGE_SEND;
-  // msg[1] = msg_len;
-  msg[0] = message_id;
+void sendCoords(int version) {
+  char out[1024];
+  switch (version) {
+  case 0:
+  case 1:
+    snprintf(out, 1024, "[%ld %ld]", latitude, longitude);
+    break;
 
-
-  *(long*)(msg+1) = latitude;
-  *(long*)(msg+5) = longitude;
-  *(long*)(msg+9) = altitude;
-  *(uint8_t*)(msg+13) = voltage;
-
-  S6C.tx(msg, msg_len);
-  */
-
-  S6C.tx("banana");
-
-  //snprintf(out, msg_len, "%c%f%d", res, sq.getState());
-  /*
-    ((int32_t *)(msg + 3))[0] = (random(360)-180)*1000000; //long(gps.location.lat()*1000000);
-    ((int32_t *)(msg + 3))[1] = (random(360)-180)*1000000; //long(gps.location.lng()*1000000);
-    ((int32_t *)(msg + 3))[2] = random(412500); //long(gps.altitude.feet());
-  */
-
+  case 2:
+  case 3:
+    snprintf(out, 1024, "(%ld %d)", altitude, voltage);
+    break;
+  }
+  S6C.tx(out);
 }
